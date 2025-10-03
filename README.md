@@ -20,34 +20,19 @@ I use them both in my **personal productivity stack** and in **client projects**
 
 ## ⚡ Workflows Included
 
-Each workflow lives in its own JSON export (ready to import into n8n) or cloud pipeline configuration.  
-Highlights:
+Here are the automations currently in this repository:
 
-### 🔄 AI Translation Workflow (n8n + Airtable + Claude + DeepL)
-- Input: Airtable form (Source text, target language, tone, style)  
-- Processing: Claude + DeepL translations → Claude comparison → Final result  
-- Output: Writes back to Airtable with all versions, status updates, and error handling  
+### 1. Airtable-Claude-DeepL Translation Agent
+-   **File:** `Airtable-Claude-DeepL Translation Agent Workflow.json`
+-   **Description:** This workflow automates the translation process for a large German ecommerce brand. It's triggered by a webhook with a source text, target language, and other parameters. It uses both DeepL and Claude for translation, and then a final LLM call to compare and produce a superior translation. The results are then saved to an Airtable base.
 
-### 📩 Automated Lead Capture & Enrichment
-- Scrape or receive leads → enrich with LinkedIn / Clearbit → push to CRM (Zoho, Airtable, HubSpot)  
+### 2. Instagram Lead Personalized Email Generator
+-   **File:** `Instagram Lead Personalized Email Generator.json`
+-   **Description:** This workflow was built for a world-leading Instagram marketer (150K+ followers) to generate personalized emails for new leads. It's triggered by a survey submission, scrapes the lead's Instagram profile using Apify, and then uses an LLM to generate a personalized email. The email is then sent, and a notification is sent to Telegram for quality control.
 
-### 📊 Content Repurposing Pipelines
-- Convert YouTube videos into Medium drafts or blog posts using LLMs  
-- Summarize transcripts and generate multiple content formats automatically  
-
-### 🤖 Telegram & Voice Agents
-- Chatbots for lead generation, structured Q&A, or internal knowledge base queries  
-
-### 📑 Document Processing (Azure + n8n)
-- Integrates **Azure Form Recognizer** and **Azure Cognitive Services** for document parsing and classification  
-- Uses n8n for orchestration and routing results into Airtable / Google Sheets  
-
-### ☁️ Azure Automations
-- Built custom pipelines with:  
-  - **Azure Logic Apps** for enterprise workflow automation  
-  - **Azure Functions** for serverless tasks (data cleaning, API integration)  
-  - **Azure Cognitive Services** for OCR, translation, and sentiment analysis  
-- Integrated Azure pipelines with n8n workflows for hybrid automation setups  
+### 3. ZohoCRM LLM Lead Enrich Agent
+-   **File:** `ZohoCRM LLM Lead Enrich Agent.json`
+-   **Description:** This workflow enriches lead data in ZohoCRM for a UK-based Capital Venture firm. When a new lead is added, this workflow is triggered. It uses an LLM to find more information about the lead and their company, and then updates the lead's record in ZohoCRM with the new information. It includes a deduplication step to avoid enriching the same lead multiple times.
 
 ---
 

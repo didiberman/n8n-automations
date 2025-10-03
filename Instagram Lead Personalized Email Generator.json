@@ -1,0 +1,853 @@
+{
+  "name": "Sam Survey Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://ip-api.com/json/{{ $json.body.attributionSource.ip }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1408,
+        320
+      ],
+      "id": "85a85287-99ea-46c2-ab53-43743d795404",
+      "name": "IP Country Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const country = $json.country;\n\n// List of all African countries except South Africa\nconst africanCountries = [\n  \"Nigeria\", \"Kenya\", \"Egypt\", \"Morocco\", \"Ghana\", \"Ethiopia\", \"Algeria\",\n  \"Uganda\", \"Tanzania\", \"Zambia\", \"Zimbabwe\", \"Cameroon\", \"Ivory Coast\",\n  \"Senegal\", \"Angola\", \"Mozambique\", \"Rwanda\", \"Tunisia\", \"Sudan\", \"Mali\",\n  \"Burkina Faso\", \"Niger\", \"Chad\", \"Guinea\", \"Benin\", \"Togo\", \"Botswana\",\n  \"Namibia\", \"DR Congo\", \"Republic of the Congo\", \"Gabon\", \"Lesotho\", \"Eswatini\"\n  // Add or remove as needed\n];\n\n// Low-value Asian countries (adjust based on your criteria)\nconst lowValueAsianCountries = [\n  \"India\", \"Bangladesh\", \"Pakistan\", \"Nepal\", \"Afghanistan\", \"Myanmar\", \"Cambodia\", \"Laos\"\n];\n\nconst isAfricanTarget = africanCountries.includes(country);\nconst isLowValueAsia = lowValueAsianCountries.includes(country);\n\nif (isAfricanTarget || isLowValueAsia) {\n  return [{ json: { match: true, country } }];\n} else {\n  return [{ json: { match: false, country } }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        320
+      ],
+      "id": "fd430282-c7b7-4bf9-b845-245bd6d6dd0f",
+      "name": "Country Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0357b63e-f533-4ca8-8048-080b9e7ad6af",
+              "leftValue": "={{ $json.match }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1104,
+        320
+      ],
+      "id": "1cf7ac46-6c53-40c1-aeeb-982d39f167a4",
+      "name": "Remove Low Value Countries"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/apify~instagram-scraper/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n      \"directUrls\": [\n        \"https://www.instagram.com/{{ $json.clean_instagram }}/\"\n      ],\n      \"resultsType\": \"details\",\n      \"resultsLimit\": 30\n    }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -544,
+        544
+      ],
+      "id": "51fe8f42-ace7-4e70-9f4c-a57067a4ed22",
+      "name": "Start APIFY Actor",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "7yR8h35TO3k3Av4D",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -96,
+        544
+      ],
+      "id": "430059db-3a66-4c1a-ab46-939b7fb5848c",
+      "name": "Get Data from APIFY",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "7yR8h35TO3k3Av4D",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -320,
+        544
+      ],
+      "id": "688e2a9e-13d0-48e9-b5e4-86d13c4ec3dd",
+      "name": "Wait 30s",
+      "webhookId": "dc3849c5-eb57-46f1-b40e-319610d8ffc0"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/hooks/eA2811bhspmZRLrperbd/webhook-trigger/708ae76a-6878-4dca-9976-8447522e01fe",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "subject",
+              "value": "Had a look at your Instagram"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Get Survey').item.json.body.email }}"
+            },
+            {
+              "name": "emailbody",
+              "value": "={{ $json.email_content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1312,
+        304
+      ],
+      "id": "1b3eb9a8-cda3-4b47-8db0-1e81ec5337ec",
+      "name": "Send Email"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get email content from previous node\nconst emailContent = $input.first().json.text;\n\n// Convert line breaks to HTML\nlet htmlContent = emailContent.replace(/\\n/g, '<br>');\n\n// Convert **text** to <strong>text</strong> (bold)\nhtmlContent = htmlContent.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\n\n// Convert URLs to clickable links\n// This regex matches http/https URLs\nconst urlRegex = /(https?:\\/\\/[^\\s<>\"{}|\\\\^`\\[\\]]+)/gi;\nhtmlContent = htmlContent.replace(urlRegex, '<a href=\"$1\" target=\"_blank\">$1</a>');\n\n// Optional: Also convert www. URLs (without http/https)\nconst wwwRegex = /(^|[^\\/])(www\\.[^\\s<>\"{}|\\\\^`\\[\\]]+)/gi;\nhtmlContent = htmlContent.replace(wwwRegex, '$1<a href=\"http://$2\" target=\"_blank\">$2</a>');\n\nreturn {\n  email_content: htmlContent,\n  // ... other fields you need to pass through\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        160
+      ],
+      "id": "e6b2c71d-9947-4ac8-9e29-b962a1add1a6",
+      "name": "Format for HTML"
+    },
+    {
+      "parameters": {
+        "chatId": "614587329",
+        "text": "={{ $json.telegram_content }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1888,
+        384
+      ],
+      "id": "7fda0fc9-eadc-4525-ae9d-5dd496fba6fe",
+      "name": "Telegram",
+      "webhookId": "84787e49-cbce-4466-bc4d-2e1c301fd61f",
+      "credentials": {
+        "telegramApi": {
+          "id": "bmsF1ZfBa8kgaRLC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Remove @ symbols from string - n8n Code Node\n// Place this in a Code node in your n8n workflow\n\n// Get the input string (adjust the field path as needed)\nconst inputString = $('Get Survey').first().json.body[\"Instagram @?\"] // Change this to your field name\n\n// Remove all @ symbols\nconst cleanString = inputString.replace(/@/g, '');\n\n// Return the cleaned string\nreturn {\n  json: {\n    ...$input.item.json,  // Keep all original data\n    clean_instagram: cleanString,  // Add cleaned version\n    original_instagram: inputString  // Keep original for reference\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        544
+      ],
+      "id": "c452bcf4-7b23-4b19-a2dd-f90434f74591",
+      "name": "fix instagram username"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HTML to Telegram Formatter\n// Place this in a Code node in your n8n workflow\n\n// Get the HTML content from previous node\nconst htmlContent = $('Format for HTML').first().json.email_content; // Adjust field name as needed\n\n// Convert HTML to Telegram format\nlet telegramContent = htmlContent\n    // Line breaks\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/p>/gi, '\\n')\n    .replace(/<p>/gi, '')\n    \n    // Bold formatting\n    .replace(/<strong>(.*?)<\\/strong>/gi, '*$1*')\n    .replace(/<b>(.*?)<\\/b>/gi, '*$1*')\n    \n    // Italic formatting\n    .replace(/<em>(.*?)<\\/em>/gi, '_$1_')\n    .replace(/<i>(.*?)<\\/i>/gi, '_$1_')\n    \n    // Links - convert to Telegram markdown format\n    .replace(/<a[^>]*href=\"([^\"]*)\"[^>]*>(.*?)<\\/a>/gi, '[$2]($1)')\n    \n    // Remove any remaining HTML tags\n    .replace(/<[^>]*>/g, '')\n    \n    // Clean up multiple line breaks\n    .replace(/\\n{3,}/g, '\\n\\n')\n    \n    // Trim whitespace\n    .trim();\n\n// Return the formatted content\nreturn {\n    json: {\n        ...$input.item.json,\n        telegram_content: telegramContent\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        560
+      ],
+      "id": "95a027eb-4d1b-447d-bb7b-1cf53e2fd83d",
+      "name": "Prep for Telegram"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "samsurvey",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1648,
+        544
+      ],
+      "id": "8b18ba86-a873-4457-bd03-b4a868622658",
+      "name": "Get Survey",
+      "webhookId": "d5e4fbe8-a137-47b0-b98e-97296d42ca84"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-opus-4-20250514",
+          "mode": "list",
+          "cachedResultName": "Claude Opus 4"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        240
+      ],
+      "id": "11954201-59e2-4b8f-a12e-9b625c22f342",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "Du1bZn2LMYEos453",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=If you don't have enough information to create a personalised E-mail (if one or a few of the data points are missing enough to not be able to compose the email), please simply return \"NOT ENOUGH INFORMATION\"\n\nYou are Sam. Write like you're texting a friend who asked for honest feedback about their Instagram.\n\n## Required Data\n- Instagram handle: {{ $json.username }}\n- Full name: {{ $json.fullName }}\n- Business type: {{ $('Get Survey').item.json.body[\"What best describes your business?\"] }}\n- Biggest challenges: {{ $('Get Survey').item.json.body[\"Biggest challenge right now?\"] }}\n- Goals/desired outcomes: {{ $('Get Survey').item.json.body[\"What do you want most?\"] }}\n- Current revenue: {{ $('Get Survey').item.json.body[\"Monthly revenue?\"] }}\n\n## Account Info:\n- Username: {{ $json.username }}\n- Full Name: {{ $json.fullName }}\n- Bio: {{ $json.biography }}\n- Category: {{ $json.businessCategoryName }}\n- Followers: {{ $json.followersCount }}\n- Posts: {{ $json.postsCount }}\n\n## Recent Posts:\n- {{ $json.latestPosts[0].caption }} [{{ $json.latestPosts[0].type }}]\n- {{ $json.latestPosts[1].caption }} [{{ $json.latestPosts[1].type }}]\n- {{ $json.latestPosts[2].caption }} [{{ $json.latestPosts[2].type }}]\n\n## Writing Rules (50-80 words MAX)\n\n### CONNECT TO THEIR ACTUAL PROBLEMS:\n- Reference their specific challenge/goal from survey\n- Show how Instagram issue relates to their stated problem\n- Don't guess - use their exact words when possible\n- Make it personal to THEIR situation\n\n### BE GENUINELY CURIOUS (NOT HARSH):\n- Skip unnecessary words/phrases completely\n- Use \"noticed,\" \"curious,\" \"wondering\" instead of \"weird\" or \"literally nothing\"\n- Be direct but not dismissive\n- Sound genuinely interested in helping, not judgmental\n\n### Structure:\n1. What you saw (neutral observation)\n2. How this relates to their challenge/goal (be specific)\n3. One genuine question about their strategy or results\n4. Simple suggestion that feels helpful\n\n### CHALLENGE/GOAL INTEGRATION:\n- Make sure to address the challenges and goals they are facing / trying to achieve\n- Frame observations as opportunities, not failures\n\n### KILL THESE PHRASES:\n- \"Super [anything]\"\n- \"might help figure out\"\n- \"Quick coffee chat\"\n- Any compliment before the \"but\"\n- \"Here's the thing\"\n- \"What I noticed\"\n- \"literally nothing/empty\"\n- Any sarcastic questions\n\n### BETTER WORDS:\n- Instead of \"weird/strange\" → \"noticed\" or \"saw\"\n- Instead of \"inquiries\" → \"bookings\" or \"calls\"\n- Instead of \"Quick coffee chat might help\" → \"Worth a call?\"\n- Instead of \"engaging with content\" → \"commenting\" or \"responding\"\n- Instead of harsh observations → curious questions\n\n### SENTENCE STARTERS THAT WORK:\n- \"Just saw...\"\n- \"Noticed you mentioned...\"\n- \"You said you want [their goal]...\"\n- \"Curious about...\"\n- \"Been thinking about your [challenge]...\"\n- \"Worth exploring...\"\n\n### AVOID:\n- Sarcasm or rhetorical questions\n- Pointing out obvious negatives harshly\n- Making them feel bad about their current state\n- Fake compliments OR harsh criticism\n- Transition phrases\n\n## PERFECT EXAMPLE STRUCTURES:\n\n### For \"getting more bookings\" goal:\n\"Just saw your [post reference].\nYou mentioned wanting more bookings - noticed your posts don't show how to actually book you.\nWhat's your current booking process from Instagram?\nWorth a call?\"\n\n### For \"standing out\" challenge:\n\"Noticed you mentioned wanting to stand out.\nYour [specific content type] could really pop with [specific observation].\nBeen getting the engagement you're after?\nWorth exploring on a call?\"\n\n### For low post count/followers:\n\"Saw you're working on [their stated goal].\nYou mentioned [their challenge] - curious what your content strategy looks like right now?\nBeen focusing more on client work than your own page?\nWorth a call?\"\n\n## SUCCESS = Sounds like someone who:\n- Actually read their survey answers\n- Connected Instagram observation to their real business challenge\n- Is genuinely trying to help\n- Gets straight to the point\n- Shows curiosity rather than judgment\n- Under 80 words TOTAL\n\nJust email content ending with \"Sam\" - nothing else.\nPlease use the person's first name in the start of the E-mail, if available. If the name has any special characters, strip it down and use a simple name.\nLet's make the call to action a bit more clear and forward - make it easy for the person to say yes to Sam's offer or to reply to the e-mail."
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        320,
+        48
+      ],
+      "id": "523ac6d4-c3ae-4fee-83d4-1bf8974b9d1e",
+      "name": "Generate Email",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "content": "CHANGE PROMPT HERE\n",
+        "height": 260,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        304,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "c42aebfa-02ea-4079-bc06-88e800d129d9",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## GUIDELINES\n\nThis automation receives a Survey from Sam's CourseCreator360 then removes low-value countries,\nscrapes the Instagram profile via APIFY\nCreates a personalized E-mail, sends it to the user, and sends Yadid the email via Telegram for inspection\n",
+        "height": 540,
+        "width": 840
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1680,
+        192
+      ],
+      "typeVersion": 1,
+      "id": "23ace9d0-3140-4a4e-837d-5e8dd9501311",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c71348f-2147-473d-84a5-c49f9b038c8f",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "NOT ENOUGH INFORMATION",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        48
+      ],
+      "id": "7d6bca8d-7de7-498a-b56b-6a4d275bee6c",
+      "name": "If"
+    }
+  ],
+  "pinData": {
+    "Get Survey": [
+      {
+        "json": {
+          "headers": {
+            "connection": "upgrade",
+            "host": "sam.didibeing.social",
+            "content-length": "12597",
+            "accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+            "user-agent": "axios/1.7.7",
+            "accept-encoding": "gzip, compress, deflate, br"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "Are they totally and permanently disabled?": "",
+            "Any Allergies?": "",
+            "Any Additional Comments, Questions Or Special Requests?": "",
+            "Vehicle Year:": "",
+            "Whatsapp": "",
+            "Special Instructions ": "",
+            "Do you have any suggestions for new menu items?": "",
+            "Is this your first time opening a pre-tax account?": "",
+            "Country Qualified or not": "",
+            "Message History": "",
+            "Looking for a freebie? ": "",
+            "Total Expenses": "",
+            "What factors are important to you when selecting a marketing agency (e.g., experience, portfolio, cost)?": "",
+            "Other (Please specify):": "",
+            " Description of the Issue:": "",
+            "Could you provide a breakdown of how you intend to allocate the budget across different marketing activities (e.g., advertising, content creation, website development)?": "",
+            "Event Start Time": "",
+            "What exactly made you book the call?": "",
+            "Are they your dependent?": "",
+            "What was your least favourite item(s)": "",
+            "Whats your Instagram?": "",
+            "Do you have $2k to invest in your business?": "",
+            "Service(s) Needed": "",
+            "How likely are you to recommend our company to others? (1-5 scale)": "",
+            "Do you feel that the service provided was good value for the cost? (1-5 scale)": "",
+            "What Was Your Favorite Item(s) You Tried?": "",
+            "Do you have an ideal timeline in mind for the project?": "",
+            "What specific areas do you want to focus on? (e.g., career, relationships, personal growth)": "",
+            "To better understand your current situation, what is your business’s monthly income?": "",
+            "What is budget range allocated for the marketing project?": "",
+            "What describes best your business? ": "",
+            "Are there any specific qualifications or expertise you prioritize in the evaluation process?": "",
+            "Solutions": "",
+            "Do you have any additional comments, feedback, or suggestions regarding the legal services market?": "",
+            "Preferred Date:": "",
+            "Goals Accomplished": "",
+            "Location Name": "",
+            "How would you rate the communication from our team before, during, and after the service? (1-5 scale)": "",
+            "How much are you looking to grow your business in the next quarter? ": "",
+            "When can you start and what are your salary expectations?": "",
+            "How soon do you want results?": "ASAP (next 30 days)",
+            "Latest AI Response": "",
+            "If other please specify:": "",
+            "What is your preferred membership duration?": "",
+            "Referrer Domain": "",
+            "Preferred Time:": "",
+            "Current job": "",
+            "Mileage:": "",
+            "Phone Number": "",
+            "Any Known Medical Conditions": "",
+            "Preferred Date for Consultation": "",
+            "How much are you willing to invest in your business?": "",
+            "Appointment Notes": "",
+            "Vehicle Make:": "",
+            "Email Score": "",
+            "Upload A Screenshot of Your Trustpilot Review": "",
+            "Does this issue require immediate attention for you?": "",
+            "Spouse Occupation ": "",
+            "If Sold Lead Value:": "",
+            "Overall satisfaction rating (scale of 1 to 5)": "",
+            "Qualified Job": "",
+            "How satisfied were you with the communication throughout the towing process? (1-5 scale)": "",
+            "Any Specific Concerns or Goals for the Consultation": "",
+            "Current Medications": "",
+            "Taxpayer Signature": "",
+            "What are your primary fitness goals? ": "",
+            "How did you hear about us?": "",
+            "Email Address": "",
+            "Type of Service Requested:": "",
+            "Biggest challenge now?": "",
+            "Is there any other relevant information or specific requirements that you would like to communicate to potential marketing agencies?": "",
+            "What are your objectives and goals for the project?": "",
+            "Which specific services are required for your project? Please select all that apply:": "",
+            "How satisfied are you with the quality of the work performed? (1-5 scale)": "",
+            "Have you implemented any marketing strategies in the past? If yes, please describe them briefly.": "",
+            "What were the outcomes or results achieved from your previous marketing efforts?": "",
+            "Check All Services Requested:": "",
+            "Would you recommend us?": "",
+            "Rate your English skills 1-10 and timezone availability.": "",
+            "Are you interested in personal training services?": "",
+            "What do you want most?": [
+              "Higher conversion rates",
+              "Better personal brand"
+            ],
+            "Please provide a brief description of the project or the information you need.": "",
+            "Gender": "",
+            "Is there anything else you would like to share with us about your visit?": "",
+            "What's your experience with DM setting? Include specific results if possible.": "",
+            "Spam": "",
+            "Are they legally blind?": "",
+            "Date Signed": "",
+            "What are your main reasons for seeking life coaching?": "",
+            "Problem": "",
+            "Why do you want to work with my content?": "",
+            "Are you a full-time student?": "",
+            "Message": "",
+            "Address": "",
+            "How satisfied were you with the food you were served?": "",
+            "Can you work full-time (40+ hours/week) during US/European business hours?": "",
+            "Do you have any specific fitness challenges or limitations we should be aware of?": "",
+            "What best describes your business?": "Photography / Videography",
+            "Type of visit": "",
+            "Type of Service Needed - Check all that apply": "",
+            "Employment Status": "",
+            "Rate the visual appeal of your website. (Scale of 1 to 5)": "",
+            "Describe your current living situation - do you travel frequently or are you based in one location? (Need someone stable for consistent work)": "",
+            "Spouse Date Of Birth": "",
+            " Type of Service Needed (Check all that apply):": "",
+            "Last Email Open": "",
+            "Follow Up In": "",
+            "Have you worked with a life coach before? If yes, what was your experience?": "",
+            "Reason for Consultation": "",
+            "Whats your business dream? ": "",
+            "How satisfied are you with the overall service provided? (1-5 scale, where 1 is very dissatisfied and 5 is very satisfied)": "",
+            "Preferred Contact Method:": "",
+            "Expected Start Date:": "",
+            "Is this a residential or commercial property?": "",
+            "Enter your dependents here": "",
+            "Type of Service Provided:": "",
+            "Are they a full-time student?": "",
+            "Have you been a member of a gym before?": "",
+            "Appointment Status": "",
+            "Preferred time slots": "",
+            "Occupation": "",
+            "Type of Service (Check all that apply)": "",
+            "Instagram @?": "@yadidians",
+            "How would you rate the professionalism and courtesy of the technician? (1-5 scale)": "",
+            "Lead Source": "",
+            "Who is your primary target audience and demographic?": "",
+            "Are any of these affecting currently you?": "",
+            "What can we help with?": "",
+            "What are your top three goals you hope to achieve through coaching?": "",
+            "What do you want the most? ": "",
+            "What is the monthly rental amount?": "",
+            "Preferred Hair Products (if any):": "",
+            "If you found the right solution to scale your business, would you be in a position to invest in it?": "",
+            "How can we make it up to you?": "",
+            "Text Score": "",
+            "Anything else you'd like to share? (Optional)": "testy",
+            "What specific deliverables do you expect from the marketing agency?": "",
+            "Service speed (scale of 1 to 5)": "",
+            "Choose a time slot:": "",
+            "Allergies or Sensitivities:": "",
+            "Location Cleanliness (scale of 1 to 5)": "",
+            "Service Needed: (Check all that apply)": "",
+            "hi": "",
+            "Preferred Barber (if any):": "",
+            "Overall Atmosphere Rating (scale of 1 to 5)": "",
+            "INTERNAL NOTES: (NOT SENT TO CLIENT)": "",
+            "Conversation Summary": "",
+            "Please include any additional information or questions you may have.": "",
+            "Enter the following expenses total amount": "",
+            "Vehicle Model:": "",
+            "Was our staff knowledgeable and helpful with the menu? (scale of 1 to 5)": "",
+            "Filing Status ": "",
+            "Biggest challenge right now?": [
+              "Content not getting attention",
+              "Leads not converting to sales"
+            ],
+            "How efficient was the service? (scale of 1 to 5)": "",
+            "What's the best sales/marketing lesson you've learned? Share a specific example of something that really worked:": "",
+            "What type of workouts do you enjoy? (Check all that apply)": "",
+            "Landing Page URL": "",
+            "Show me how you'd respond to someone who commented \"VIRAL\" on a post about content creation systems.": "",
+            "What impact do you hope to make?": "",
+            "Please provide any additional feedback or suggestions for improvement:": "",
+            "If you found the right solution to grow your business, would you be in a position to invest in it?": "",
+            "Last Purchase Date": "",
+            "What’s holding you back the most right now and what have you tried to grow your business?": "",
+            "Message/More Information": "",
+            "Have you worked with coaches making $10K+ monthly before? Describe the experience.": "",
+            "What is your gender?": "",
+            "How likely are you to recommend our services to others? (1-5 scale)": "",
+            "What's your DM setting experience? Share specific techniques, scripts, or strategies that worked best for you:": "",
+            "Are you legally blind?": "",
+            "Are you totally and permanently disabled?": "",
+            "Event start date ": "",
+            "Give us a brief description of the project:": "",
+            "I consent to the above statements and affirm my honesty regarding my health.": "",
+            "Did the design meet your expectations? ": "",
+            "Today's Date": "",
+            "How satisfied are you with the cleanliness of the work area after the service was completed? (1-5 scale)": "",
+            "Do you have $2k to invest in your business? (This can help you earn $10K-$60K per month)": "",
+            "How many discovery calls have you booked in your best month?": "",
+            "Any Previous Cosmetic Procedures?": "",
+            "Flexibility level (scale of 1 to 5)": "",
+            "Rate the communication with the web designer. (Scale of 1 to 5)": "",
+            "Last Opt-In Date": "2025-05-20",
+            "List Your Previous volunteer experience (if any)": "",
+            "Are there any accessibility issues for our team (e.g., locked gates, pets)?": "",
+            "Monthly revenue?": "Under $5K",
+            "If you found the perfect way to grow your business, are you in a position to invest?": "",
+            "Are you currently renting?": "",
+            "What would you be willing to invest in yourself?": "",
+            "Last Email Engmt": "",
+            "How can we help?": "",
+            "Contact Created": "",
+            "Was the service completed in a timely manner? (1-5 scale)": "",
+            "Conversation Recap Notes (THESE ARE EMAILED TO CLIENT):": "",
+            "Are you interested in a specific type of membership?": "",
+            "Days of the week available (check all that apply)": "",
+            "Requested Media": "",
+            "If yes, please share your experience.": "",
+            " Rate the functionality of your website (e.g., responsiveness, load speed). (Scale of 1 to 5)": "",
+            "Are you contributing to 401k or other pre-tax account?": "",
+            "Desire": "",
+            "Why do you want to volunteer with us?": "",
+            "Do you have $2000 to invest in your business? (This can help you earn $10K-$60K per month)": "",
+            "Other": "",
+            "Attach any relevant photos or documents related to the service request (if applicable).": "",
+            "How friendly was our staff? (scale of 1 to 5)": "",
+            "Spouse Full Name": "",
+            "Policy Expiry Date:": "",
+            "contact_id": "LZFgYsakLUpSI1OcrW0R",
+            "full_name": "",
+            "email": "yadidb@protonmail.com",
+            "phone": "+499723332232",
+            "tags": "lead - master",
+            "country": "NL",
+            "timezone": "Europe/Berlin",
+            "date_created": "2025-05-20T15:22:42.698Z",
+            "contact_source": "start here",
+            "full_address": "",
+            "contact_type": "lead",
+            "location": {
+              "name": "Sam Eye Am",
+              "address": "Oude Haagseweg 58",
+              "city": "North Holland",
+              "state": "North Holland",
+              "country": "NL",
+              "postalCode": "1066BW",
+              "fullAddress": "Oude Haagseweg 58, North Holland North Holland 1066BW",
+              "id": "eA2811bhspmZRLrperbd"
+            },
+            "workflow": {
+              "id": "d39a4349-18a9-4a00-9c05-24be388ada63",
+              "name": "Send Survey to AI Analysis (Yadid)"
+            },
+            "triggerData": {},
+            "contact": {
+              "attributionSource": {
+                "sessionSource": "Referral",
+                "url": "https://go.sameyeam.info/start",
+                "campaign": null,
+                "utmSource": null,
+                "utmMedium": null,
+                "utmContent": null,
+                "utmTerm": null,
+                "utmKeyword": null,
+                "utmMatchtype": null,
+                "referrer": "https://www.sameyeam.info",
+                "gclid": null,
+                "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+                "ip": "2003:ec:2f44:2501:cd0f:f300:ae2f:6d76",
+                "gaClientId": "GA1.1.223720837.1746260987",
+                "medium": "survey",
+                "mediumId": "uCjZCPeoN9AqxxPkb1AG",
+                "adName": null,
+                "adGroupId": null,
+                "adId": null,
+                "gbraid": null,
+                "wbraid": null
+              },
+              "lastAttributionSource": {
+                "sessionSource": "Direct traffic",
+                "url": "https://go.sameyeam.info/start",
+                "utmSource": null,
+                "utmMedium": null,
+                "utmContent": null,
+                "utmTerm": null,
+                "utmKeyword": null,
+                "utmMatchtype": null,
+                "referrer": null,
+                "gclid": null,
+                "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+                "ip": "2003:cb:f72a:2a76:7d51:f5fe:6cc7:4a0e",
+                "gaClientId": "GA1.1.775771331.1757010193",
+                "gaSessionId": null,
+                "medium": "survey",
+                "mediumId": "uCjZCPeoN9AqxxPkb1AG",
+                "adName": null,
+                "adGroupId": null,
+                "adId": null,
+                "gbraid": null,
+                "wbraid": null
+              }
+            },
+            "attributionSource": {
+              "sessionSource": "Direct traffic",
+              "url": "https://go.sameyeam.info/start",
+              "utmSource": null,
+              "utmMedium": null,
+              "utmContent": null,
+              "utmTerm": null,
+              "utmKeyword": null,
+              "utmMatchtype": null,
+              "referrer": null,
+              "gclid": null,
+              "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+              "ip": "2003:cb:f72a:2a76:7d51:f5fe:6cc7:4a0e",
+              "gaClientId": "GA1.1.775771331.1757010193",
+              "gaSessionId": null,
+              "medium": "survey",
+              "mediumId": "uCjZCPeoN9AqxxPkb1AG",
+              "adName": null,
+              "adGroupId": null,
+              "adId": null,
+              "gbraid": null,
+              "wbraid": null
+            },
+            "customData": {}
+          },
+          "webhookUrl": "http://localhost:5678/webhook-test/samsurvey",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "IP Country Check": {
+      "main": [
+        [
+          {
+            "node": "Country Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Country Check": {
+      "main": [
+        [
+          {
+            "node": "Remove Low Value Countries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Low Value Countries": {
+      "main": [
+        [
+          {
+            "node": "fix instagram username",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start APIFY Actor": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s": {
+      "main": [
+        [
+          {
+            "node": "Get Data from APIFY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Data from APIFY": {
+      "main": [
+        [
+          {
+            "node": "Generate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for HTML": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Prep for Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fix instagram username": {
+      "main": [
+        [
+          {
+            "node": "Start APIFY Actor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep for Telegram": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Survey": {
+      "main": [
+        [
+          {
+            "node": "IP Country Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Format for HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f6439264-a5f6-46d5-8be1-98d1cdce4a6e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b6d9ee77077fed9333c8ac9161e350c8376a6f3efd2203f2b7a404327d671663"
+  },
+  "id": "4FD96V4liIcNdaSG",
+  "tags": []
+}

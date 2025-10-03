@@ -1,0 +1,806 @@
+{
+  "name": "Enrich Lead Data in ZohoCRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leadenrich523213",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        384,
+        -192
+      ],
+      "id": "defb6dd8-caef-437d-918c-c9467afd5831",
+      "name": "Webhook",
+      "webhookId": "5ade515f-9250-4105-a901-6c16cda03507"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Name of company:  {{ $('Webhook').item.json.body.company }}\nEmployee at company: {{ $('Webhook').item.json.body.leadname }}\nCompany website (if we have it): {{ $('Webhook').item.json.body.website }}\nLinkedin of employee (if we have it): {{ $('Webhook').item.json.body.linkedin }}\nPlease provide a concise overview of the company & employee details in strict JSON format, using exactly these keys, in this exact order.\n{\n  \"Location (City)\": \"\",\n  \"Location (Country)\": \"\",\n  \"Website\": \"\",\n  \"Investment Sectors\": \"\",\n  \"Investment Stages\": \"\",\n  \"Investment Criteria\": \"\",\n  \"Typical Investment Amount\": \"\",\n  \"Short Company Summary\": \"\",\n  \"Employee role at company\": \"\",\n  \"Sector focus of employee\": \"\",\n  \"Time employee joined company\": \"\"\n}\nImportant Rules:\n- Do not include any sources like [1], [2] etc.\n- We are searching only for VC / Investment firms. Do not return any other companies relating to other business fields please.\n- Do not change or skip any of the keys.\n- If any value is unknown, please say just \"Unknown\"\n- Values should be plain text, single-line where possible.\n- Short company summary should be maximum 1 paragraph. No long company analysis please.\n- Make sure no answer is more than one sentence per question as our space in the database is limited.\n- For the Sector focus of employee detail, please write one sentence starting with the employee's name, and what he/she does at the company.\n- For the Employee specific information please search the web for this data.\n- For the employee role at company please just state their role without needing to repeat their name.\n- Please don't use any em dashes or any special characters in any of the response fields. Do not use the EURO character € or pound sign £ and instead say EUR or GBP.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1728,
+        -192
+      ],
+      "id": "34d327d7-8845-4a9f-87cf-310fc31a58db",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "perplexity/sonar-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        32
+      ],
+      "id": "56920b1e-e683-4912-97fa-c378b08c89b9",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "j3Xy9wQAvbteYgzV",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the first input item\nconst inputItem = $input.first().json;\n\n// Try to find the LLM response in common property names\nconst raw = inputItem.llmResponse \n  || inputItem.output \n  || inputItem.response \n  || inputItem.text\n  || inputItem.result\n  || inputItem.data\n  // If none of the above exist and inputItem is an object with data, use it directly\n  || (typeof inputItem === 'object' && Object.keys(inputItem).length > 0 ? inputItem : null);\n\n// Function to remove citation markers from strings\nfunction removeCitations(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/\\[\\d+\\]/g, '');\n}\n\n// Function to clean citation markers from all string values in an object\nfunction cleanObjectCitations(obj) {\n  if (typeof obj !== 'object' || obj === null) {\n    return removeCitations(obj);\n  }\n  \n  if (Array.isArray(obj)) {\n    return obj.map(item => cleanObjectCitations(item));\n  }\n  \n  const cleaned = {};\n  for (const key in obj) {\n    cleaned[key] = cleanObjectCitations(obj[key]);\n  }\n  return cleaned;\n}\n\n// Function to extract and parse JSON from various formats\nfunction parseRobustJSON(input) {\n  if (!input) {\n    throw new Error(\"Input is empty or undefined\");\n  }\n  \n  // Check if input is already an object (already parsed)\n  if (typeof input === 'object' && input !== null) {\n    // Clean citations from the already-parsed object\n    return cleanObjectCitations(input);\n  }\n  \n  // If it's not a string, try to convert it\n  if (typeof input !== 'string') {\n    return input;\n  }\n  \n  let cleaned = input.trim();\n  \n  // Remove citation markers like [1], [2], [123], etc.\n  cleaned = removeCitations(cleaned);\n  \n  // Remove markdown code blocks (```json ... ``` or ``` ... ```)\n  cleaned = cleaned.replace(/^```(?:json)?\\s*\\n?/i, '').replace(/\\n?```\\s*$/, '');\n  \n  // Remove any leading/trailing whitespace again after code block removal\n  cleaned = cleaned.trim();\n  \n  // Handle cases where there might be text before/after the JSON\n  // Try to find JSON object boundaries\n  const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    cleaned = jsonMatch[0];\n  }\n  \n  // Parse the JSON\n  const parsed = JSON.parse(cleaned);\n  \n  // Clean citations from the parsed result\n  return cleanObjectCitations(parsed);\n}\n\ntry {\n  // Parse the JSON string into an object (or pass through if already parsed)\n  const parsed = parseRobustJSON(raw);\n  \n  // Return all fields as one structured item\n  return [\n    {\n      json: parsed\n    }\n  ];\n} catch (error) {\n  // Return error information for debugging\n  return [\n    {\n      json: {\n        error: \"Failed to parse JSON\",\n        errorMessage: error.message,\n        rawInput: raw,\n        inputType: typeof raw,\n        availableKeys: Object.keys(inputItem),\n        fullInput: inputItem\n      }\n    }\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        -192
+      ],
+      "id": "50562616-c999-4530-843c-e4c65a0c3e55",
+      "name": "Parse"
+    },
+    {
+      "parameters": {
+        "jsCode": "const min = 10;\nconst max = 120;\n\nconst randomSeconds = Math.floor(Math.random() * (max - min + 1)) + min;\n\nreturn {\n  seconds: randomSeconds\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        -192
+      ],
+      "id": "91aca302-9d59-4a94-8340-0e434279515a",
+      "name": "Generate random delay"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.seconds }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        832,
+        -192
+      ],
+      "id": "3ea393f9-3c72-401b-927a-895e14693595",
+      "name": "Random Delay",
+      "webhookId": "4b815efb-ec4c-40a9-9a6f-8e23e756ca8e"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "x7txEdvzTac5Ylyb",
+          "mode": "list",
+          "cachedResultName": "stored leadnames dedupe",
+          "cachedResultUrl": "/projects/Z3L5Y3h60bSUlOX7/datatables/x7txEdvzTac5Ylyb"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "leadname",
+              "keyValue": "={{ $('Webhook').item.json.body.leadname }} {{ $('Webhook').item.json.body.company }}"
+            }
+          ]
+        },
+        "limit": 5
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -192
+      ],
+      "id": "3cdca0fe-0fc3-46df-80a6-796f56411317",
+      "name": "Get row(s)",
+      "alwaysOutputData": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "x7txEdvzTac5Ylyb",
+          "mode": "list",
+          "cachedResultName": "stored leadnames dedupe",
+          "cachedResultUrl": "/projects/Z3L5Y3h60bSUlOX7/datatables/x7txEdvzTac5Ylyb"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "leadname": "={{ $('Webhook').item.json.body.leadname }} {{ $('Webhook').item.json.body.company }}"
+          },
+          "matchingColumns": [
+            "leadname"
+          ],
+          "schema": [
+            {
+              "id": "leadname",
+              "displayName": "leadname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -192
+      ],
+      "id": "c8cc4ded-b0b4-4e7e-a5f8-ab66e8946fd4",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "792c7176-3555-4c28-8c99-57529b980770",
+              "leftValue": "={{ $json.leadname }}",
+              "rightValue": "={{ $('Webhook').item.json.body.leadname }} {{ $('Webhook').item.json.body.company }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        -192
+      ],
+      "id": "62795663-853d-415d-9d52-ae33fad44351",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9cf6e754-a011-4281-85f0-ef134ad6260c",
+              "leftValue": "={{ $('Parse').item.json['Employee role at company'] }}",
+              "rightValue": "Unknown",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2304,
+        -192
+      ],
+      "id": "fd668236-3e70-4e7d-a3f2-d71442d6fe06",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "update",
+        "leadId": "={{ $('Webhook').item.json.body.leadid }}",
+        "updateFields": {
+          "customFields": {
+            "customFields": [
+              {
+                "fieldId": "Company_Summary",
+                "value": "={{ $('Parse').item.json['Short Company Summary'] }}"
+              },
+              {
+                "fieldId": "Investment_Sectors_LLM",
+                "value": "={{ $('Parse').item.json['Investment Sectors'] }}"
+              },
+              {
+                "fieldId": "Ticket_Size_LLM",
+                "value": "={{ $('Parse').item.json['Typical Investment Amount'] }}"
+              },
+              {
+                "fieldId": "Investment_Stage_LLM1",
+                "value": "={{ $('Parse').item.json['Investment Stages'] }}"
+              },
+              {
+                "fieldId": "Joining_Firm",
+                "value": "={{ $('Parse').item.json['Time employee joined company'] }}"
+              },
+              {
+                "fieldId": "Investment_Criteria",
+                "value": "={{ $('Parse').item.json['Investment Criteria'] }}"
+              }
+            ]
+          },
+          "Description": "={{ $('Parse').item.json['Sector focus of employee'] }}",
+          "Designation": "={{ $('Parse').item.json['Employee role at company'] }}"
+        }
+      },
+      "type": "n8n-nodes-base.zohoCrm",
+      "typeVersion": 1,
+      "position": [
+        2592,
+        -48
+      ],
+      "id": "68ab314e-39c1-4977-b6be-8bc83920c5a9",
+      "name": "Update a lead",
+      "credentials": {
+        "zohoOAuth2Api": {
+          "id": "hnNNC9lgomu3MsPf",
+          "name": "Zoho account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Name of company:  {{ $('Webhook').item.json.body.company }}\nEmployee at company: {{ $('Webhook').item.json.body.leadname }}\nCompany website (if we have it): {{ $('Webhook').item.json.body.website }}\nLinkedin of employee (if we have it): {{ $('Webhook').item.json.body.linkedin }}\nPlease provide a concise overview of the company & employee details in strict JSON format, using exactly these keys, in this exact order.\n{\n  \"Employee role at company\": \"\",\n  \"Sector focus of employee\": \"\",\n  \"Time employee joined company\": \"\"\n}\nImportant Rules:\n- Do not include any sources like [1], [2] etc.\n- We are searching only for VC / Investment firms. Do not return any other companies relating to other business fields please.\n- Do not change or skip any of the keys.\n- If any value is unknown, please say just \"Unknown\"\n- Values should be plain text, single-line where possible.\n- Short company summary should be maximum 1 paragraph. No long company analysis please.\n- Make sure no answer is more than one sentence per question as our space in the database is limited.\n- For the Sector focus of employee detail, please write one sentence starting with the employee's name, and what he/she does at the company.\n- For the Employee specific information please search the web for this data.\n- For the employee role at company please just state their role without needing to repeat their name.\n- Please don't use any em dashes or any special characters in any of the response fields. Do not use the EURO character € or pound sign £ and instead say EUR or GBP.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        2528,
+        -448
+      ],
+      "id": "6ca2904a-6d0b-49c8-89d0-57b448ee2963",
+      "name": "Basic LLM Chain1"
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-sonnet-4.5",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2608,
+        -224
+      ],
+      "id": "c10dbda8-91d6-4d38-b786-fa9403ea32db",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "j3Xy9wQAvbteYgzV",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the first input item\nconst inputItem = $input.first().json;\n\n// Try to find the LLM response in common property names\nconst raw = inputItem.llmResponse \n  || inputItem.output \n  || inputItem.response \n  || inputItem.text\n  || inputItem.result\n  || inputItem.data\n  // If none of the above exist and inputItem is an object with data, use it directly\n  || (typeof inputItem === 'object' && Object.keys(inputItem).length > 0 ? inputItem : null);\n\n// Function to remove citation markers from strings\nfunction removeCitations(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/\\[\\d+\\]/g, '');\n}\n\n// Function to clean citation markers from all string values in an object\nfunction cleanObjectCitations(obj) {\n  if (typeof obj !== 'object' || obj === null) {\n    return removeCitations(obj);\n  }\n  \n  if (Array.isArray(obj)) {\n    return obj.map(item => cleanObjectCitations(item));\n  }\n  \n  const cleaned = {};\n  for (const key in obj) {\n    cleaned[key] = cleanObjectCitations(obj[key]);\n  }\n  return cleaned;\n}\n\n// Function to extract and parse JSON from various formats\nfunction parseRobustJSON(input) {\n  if (!input) {\n    throw new Error(\"Input is empty or undefined\");\n  }\n  \n  // Check if input is already an object (already parsed)\n  if (typeof input === 'object' && input !== null) {\n    // Clean citations from the already-parsed object\n    return cleanObjectCitations(input);\n  }\n  \n  // If it's not a string, try to convert it\n  if (typeof input !== 'string') {\n    return input;\n  }\n  \n  let cleaned = input.trim();\n  \n  // Remove citation markers like [1], [2], [123], etc.\n  cleaned = removeCitations(cleaned);\n  \n  // Remove markdown code blocks (```json ... ``` or ``` ... ```)\n  cleaned = cleaned.replace(/^```(?:json)?\\s*\\n?/i, '').replace(/\\n?```\\s*$/, '');\n  \n  // Remove any leading/trailing whitespace again after code block removal\n  cleaned = cleaned.trim();\n  \n  // Handle cases where there might be text before/after the JSON\n  // Try to find JSON object boundaries\n  const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    cleaned = jsonMatch[0];\n  }\n  \n  // Parse the JSON\n  const parsed = JSON.parse(cleaned);\n  \n  // Clean citations from the parsed result\n  return cleanObjectCitations(parsed);\n}\n\ntry {\n  // Parse the JSON string into an object (or pass through if already parsed)\n  const parsed = parseRobustJSON(raw);\n  \n  // Return all fields as one structured item\n  return [\n    {\n      json: parsed\n    }\n  ];\n} catch (error) {\n  // Return error information for debugging\n  return [\n    {\n      json: {\n        error: \"Failed to parse JSON\",\n        errorMessage: error.message,\n        rawInput: raw,\n        inputType: typeof raw,\n        availableKeys: Object.keys(inputItem),\n        fullInput: inputItem\n      }\n    }\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        -336
+      ],
+      "id": "cbb1706d-5604-4996-85a8-e7f8c413cbc9",
+      "name": "Parse1"
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "update",
+        "leadId": "={{ $('Webhook').item.json.body.leadid }}",
+        "updateFields": {
+          "customFields": {
+            "customFields": [
+              {
+                "fieldId": "Company_Summary",
+                "value": "={{ $('Parse').item.json['Short Company Summary'] }}"
+              },
+              {
+                "fieldId": "Investment_Sectors_LLM",
+                "value": "={{ $('Parse').item.json['Investment Sectors'] }}"
+              },
+              {
+                "fieldId": "Ticket_Size_LLM",
+                "value": "={{ $('Parse').item.json['Typical Investment Amount'] }}"
+              },
+              {
+                "fieldId": "Investment_Stage_LLM1",
+                "value": "={{ $('Parse').item.json['Investment Stages'] }}"
+              },
+              {
+                "fieldId": "Joining_Firm",
+                "value": "={{ $json['Time employee joined company'] }}"
+              },
+              {
+                "fieldId": "Investment_Criteria",
+                "value": "={{ $('Parse').item.json['Investment Criteria'] }}"
+              }
+            ]
+          },
+          "Description": "={{ $json['Sector focus of employee'] }}",
+          "Designation": "={{ $json['Employee role at company'] }}"
+        }
+      },
+      "type": "n8n-nodes-base.zohoCrm",
+      "typeVersion": 1,
+      "position": [
+        3392,
+        -192
+      ],
+      "id": "7fdbc9ab-e3a3-4f53-8405-58d0420467b5",
+      "name": "Update a lead1",
+      "credentials": {
+        "zohoOAuth2Api": {
+          "id": "hnNNC9lgomu3MsPf",
+          "name": "Zoho account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "49d23928-cf64-4d1d-b99b-85a1e2bbd078",
+              "leftValue": "={{ $json['Employee role at company'] }}",
+              "rightValue": "Unknown",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3104,
+        -336
+      ],
+      "id": "70cc7ed4-9614-4aed-8e56-4bd0c61726ec",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Name of company:  {{ $('Webhook').item.json.body.company }}\nEmployee at company: {{ $('Webhook').item.json.body.leadname }}\nCompany website (if we have it): {{ $('Webhook').item.json.body.website }}\nLinkedin of employee (if we have it): {{ $('Webhook').item.json.body.linkedin }}\nPlease provide a concise overview of the company & employee details in strict JSON format, using exactly these keys, in this exact order.\n{\n  \"Employee role at company\": \"\",\n  \"Sector focus of employee\": \"\",\n  \"Time employee joined company\": \"\"\n}\nImportant Rules:\n- Do not include any sources like [1], [2] etc.\n- We are searching only for VC / Investment firms. Do not return any other companies relating to other business fields please.\n- Do not change or skip any of the keys.\n- If any value is unknown, please say just \"Unknown\"\n- Values should be plain text, single-line where possible.\n- Short company summary should be maximum 1 paragraph. No long company analysis please.\n- Make sure no answer is more than one sentence per question as our space in the database is limited.\n- For the Sector focus of employee detail, please write one sentence starting with the employee's name, and what he/she does at the company.\n- For the Employee specific information please search the web for this data.\n- For the employee role at company please just state their role without needing to repeat their name.\n- Please don't use any em dashes or any special characters in any of the response fields. Do not use the EURO character € or pound sign £ and instead say EUR or GBP.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        3328,
+        -592
+      ],
+      "id": "e81d9562-5fc4-4389-8871-42f4638dbde0",
+      "name": "Basic LLM Chain2"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        3408,
+        -368
+      ],
+      "id": "b0cef1e3-5a68-433c-be36-b44f0f824bf6",
+      "name": "OpenRouter Chat Model2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "j3Xy9wQAvbteYgzV",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "update",
+        "leadId": "={{ $('Webhook').item.json.body.leadid }}",
+        "updateFields": {
+          "customFields": {
+            "customFields": [
+              {
+                "fieldId": "Company_Summary",
+                "value": "={{ $('Parse').item.json['Short Company Summary'] }}"
+              },
+              {
+                "fieldId": "Investment_Sectors_LLM",
+                "value": "={{ $('Parse').item.json['Investment Sectors'] }}"
+              },
+              {
+                "fieldId": "Ticket_Size_LLM",
+                "value": "={{ $('Parse').item.json['Typical Investment Amount'] }}"
+              },
+              {
+                "fieldId": "Investment_Stage_LLM1",
+                "value": "={{ $('Parse').item.json['Investment Stages'] }}"
+              },
+              {
+                "fieldId": "Joining_Firm",
+                "value": "={{ $json['Time employee joined company'] }}"
+              },
+              {
+                "fieldId": "Investment_Criteria",
+                "value": "={{ $('Parse').item.json['Investment Criteria'] }}"
+              }
+            ]
+          },
+          "Description": "={{ $json['Sector focus of employee'] }}",
+          "Designation": "={{ $json['Employee role at company'] }}"
+        }
+      },
+      "type": "n8n-nodes-base.zohoCrm",
+      "typeVersion": 1,
+      "position": [
+        4128,
+        -496
+      ],
+      "id": "382afc3d-7dc6-48e1-a0c5-b1077fd2455a",
+      "name": "Update a lead2",
+      "credentials": {
+        "zohoOAuth2Api": {
+          "id": "hnNNC9lgomu3MsPf",
+          "name": "Zoho account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the first input item\nconst inputItem = $input.first().json;\n\n// Try to find the LLM response in common property names\nconst raw = inputItem.llmResponse \n  || inputItem.output \n  || inputItem.response \n  || inputItem.text\n  || inputItem.result\n  || inputItem.data\n  // If none of the above exist and inputItem is an object with data, use it directly\n  || (typeof inputItem === 'object' && Object.keys(inputItem).length > 0 ? inputItem : null);\n\n// Function to remove citation markers from strings\nfunction removeCitations(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/\\[\\d+\\]/g, '');\n}\n\n// Function to clean citation markers from all string values in an object\nfunction cleanObjectCitations(obj) {\n  if (typeof obj !== 'object' || obj === null) {\n    return removeCitations(obj);\n  }\n  \n  if (Array.isArray(obj)) {\n    return obj.map(item => cleanObjectCitations(item));\n  }\n  \n  const cleaned = {};\n  for (const key in obj) {\n    cleaned[key] = cleanObjectCitations(obj[key]);\n  }\n  return cleaned;\n}\n\n// Function to extract and parse JSON from various formats\nfunction parseRobustJSON(input) {\n  if (!input) {\n    throw new Error(\"Input is empty or undefined\");\n  }\n  \n  // Check if input is already an object (already parsed)\n  if (typeof input === 'object' && input !== null) {\n    // Clean citations from the already-parsed object\n    return cleanObjectCitations(input);\n  }\n  \n  // If it's not a string, try to convert it\n  if (typeof input !== 'string') {\n    return input;\n  }\n  \n  let cleaned = input.trim();\n  \n  // Remove citation markers like [1], [2], [123], etc.\n  cleaned = removeCitations(cleaned);\n  \n  // Remove markdown code blocks (```json ... ``` or ``` ... ```)\n  cleaned = cleaned.replace(/^```(?:json)?\\s*\\n?/i, '').replace(/\\n?```\\s*$/, '');\n  \n  // Remove any leading/trailing whitespace again after code block removal\n  cleaned = cleaned.trim();\n  \n  // Handle cases where there might be text before/after the JSON\n  // Try to find JSON object boundaries\n  const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    cleaned = jsonMatch[0];\n  }\n  \n  // Parse the JSON\n  const parsed = JSON.parse(cleaned);\n  \n  // Clean citations from the parsed result\n  return cleanObjectCitations(parsed);\n}\n\ntry {\n  // Parse the JSON string into an object (or pass through if already parsed)\n  const parsed = parseRobustJSON(raw);\n  \n  // Return all fields as one structured item\n  return [\n    {\n      json: parsed\n    }\n  ];\n} catch (error) {\n  // Return error information for debugging\n  return [\n    {\n      json: {\n        error: \"Failed to parse JSON\",\n        errorMessage: error.message,\n        rawInput: raw,\n        inputType: typeof raw,\n        availableKeys: Object.keys(inputItem),\n        fullInput: inputItem\n      }\n    }\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        -496
+      ],
+      "id": "0794053d-c18f-494f-823c-7dbc7cef7911",
+      "name": "Parse2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This node compares responses from 3 LLMs and selects the best one\n// It should be placed after all 3 LLM Parse nodes complete\n\n// Get all three parsed responses\nconst response1 = $('Parse').item.json;  // Perplexity response\nconst response2 = $('Parse1').item.json; // Claude response\nconst response3 = $('Parse2').first().json; // Gemini response (you'll need to add a Parse3 node)\n\nconst responses = [\n  { source: 'Perplexity', data: response1 },\n  { source: 'Claude', data: response2 },\n  { source: 'Gemini', data: response3 }\n];\n\n// Function to score a response based on completeness and quality\nfunction scoreResponse(data) {\n  let score = 0;\n  \n  // Check each field\n  const fields = [\n    'Employee role at company',\n    'Sector focus of employee', \n    'Time employee joined company'\n  ];\n  \n  fields.forEach(field => {\n    const value = data[field];\n    \n    // Skip if field doesn't exist\n    if (!value) return;\n    \n    // Penalize \"Unknown\" responses heavily\n    if (value.toLowerCase().includes('unknown')) {\n      score += 0;\n      return;\n    }\n    \n    // Award points for having content\n    score += 10;\n    \n    // Award bonus points for longer, more detailed responses\n    if (value.length > 20) score += 5;\n    if (value.length > 50) score += 5;\n    \n    // Award bonus for specific indicators of quality\n    if (field === 'Employee role at company') {\n      // Good role descriptions contain job titles\n      const jobTitles = ['partner', 'director', 'manager', 'analyst', 'associate', 'founder', 'ceo', 'cto', 'cfo', 'vp', 'vice president', 'head', 'principal'];\n      if (jobTitles.some(title => value.toLowerCase().includes(title))) {\n        score += 10;\n      }\n    }\n    \n    if (field === 'Time employee joined company') {\n      // Good date responses contain years or specific dates\n      if (/\\d{4}/.test(value)) score += 10;\n      if (/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/.test(value)) score += 5;\n    }\n    \n    if (field === 'Sector focus of employee') {\n      // Good sector descriptions mention the employee name\n      const leadName = $('Webhook').item.json.body.leadname;\n      if (leadName && value.includes(leadName.split(' ')[0])) {\n        score += 10;\n      }\n      \n      // Check for sector keywords\n      const sectorKeywords = ['technology', 'healthcare', 'fintech', 'saas', 'biotech', 'climate', 'energy', 'consumer', 'b2b', 'b2c', 'enterprise'];\n      if (sectorKeywords.some(keyword => value.toLowerCase().includes(keyword))) {\n        score += 5;\n      }\n    }\n  });\n  \n  return score;\n}\n\n// Score all responses\nconst scoredResponses = responses.map(resp => ({\n  ...resp,\n  score: scoreResponse(resp.data),\n  completeness: calculateCompleteness(resp.data)\n}));\n\n// Function to calculate completeness percentage\nfunction calculateCompleteness(data) {\n  const fields = [\n    'Employee role at company',\n    'Sector focus of employee',\n    'Time employee joined company'\n  ];\n  \n  let filledFields = 0;\n  fields.forEach(field => {\n    const value = data[field];\n    if (value && !value.toLowerCase().includes('unknown') && value.trim().length > 0) {\n      filledFields++;\n    }\n  });\n  \n  return (filledFields / fields.length) * 100;\n}\n\n// Sort by score (highest first)\nscoredResponses.sort((a, b) => b.score - a.score);\n\n// Get the best response\nconst bestResponse = scoredResponses[0];\n\n// If the best score is still 0, create a merged response\nlet finalData;\nif (bestResponse.score === 0) {\n  // All responses are poor, merge any non-Unknown values\n  finalData = {\n    'Employee role at company': 'Unknown',\n    'Sector focus of employee': 'Unknown',\n    'Time employee joined company': 'Unknown'\n  };\n  \n  // Try to get any non-Unknown value from any response\n  const fields = Object.keys(finalData);\n  fields.forEach(field => {\n    for (const resp of responses) {\n      const value = resp.data[field];\n      if (value && !value.toLowerCase().includes('unknown') && value.trim().length > 0) {\n        finalData[field] = value;\n        break;\n      }\n    }\n  });\n} else {\n  finalData = bestResponse.data;\n}\n\n// Return the best response with metadata\nreturn [{\n  json: {\n    ...finalData,\n    _metadata: {\n      selectedSource: bestResponse.source,\n      selectedScore: bestResponse.score,\n      selectedCompleteness: bestResponse.completeness,\n      allScores: scoredResponses.map(r => ({\n        source: r.source,\n        score: r.score,\n        completeness: r.completeness\n      }))\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3904,
+        -496
+      ],
+      "id": "d144574e-1165-4a96-8b8e-e9fcadf930ea",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "capitalintro.didiberman.com",
+            "user-agent": "curl/8.7.1",
+            "content-length": "164",
+            "accept": "*/*",
+            "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "x-forwarded-for": "185.104.138.56",
+            "x-forwarded-host": "capitalintro.didiberman.com",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "266eef4044f4",
+            "x-real-ip": "185.104.138.56",
+            "accept-encoding": "gzip"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "firstname": "Alexandre",
+            "lastname": "Guillot",
+            "leadname": "Alexandre Guillot",
+            "company": "Spring Invest",
+            "email": "alexandre@spring-invest.com",
+            "website": "",
+            "linkedin": "",
+            "leadid": "603923000003164228"
+          },
+          "webhookUrl": "https://capitalintro.didiberman.com/webhook-test/leadenrich523213",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Generate random delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate random delay": {
+      "main": [
+        [
+          {
+            "node": "Random Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Random Delay": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update a lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a lead": {
+      "main": [
+        []
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Parse1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update a lead1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain2": {
+      "main": [
+        [
+          {
+            "node": "Parse2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Update a lead2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "c55ed5ff-3069-4fb3-a6bd-4f50d2b79c90",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ba45cf986c76f1758bc13afc52d24518b1cdad4b7ab5161956b40cd2ae3d179b"
+  },
+  "id": "T822dJ1J4vhV1Nkr",
+  "tags": []
+}

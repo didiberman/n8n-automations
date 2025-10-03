@@ -1,0 +1,2475 @@
+{
+  "name": "Airtable Translation Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "translationreq",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -320,
+        -176
+      ],
+      "id": "fc582850-c0ab-41be-a7ef-0c440f244696",
+      "name": "Webhook",
+      "webhookId": "121cc54d-1aef-441c-bee1-6e133bbe220b"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-20250514",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1096,
+        -48
+      ],
+      "id": "7157bcd8-c625-4b03-aaeb-73d02f2bfc26",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "2KbDDoUTEGcdEa6G",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-20250514",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1672,
+        -144
+      ],
+      "id": "4f01ac75-e925-42eb-b249-79e968b9ab95",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "2KbDDoUTEGcdEa6G",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// LLM response string\nlet raw = $json[\"text\"] || \"\";\n\n// Clean whitespace\nraw = raw.trim();\n\n// Remove ```json fences if present\nif (raw.startsWith(\"```\")) {\n  raw = raw\n    .replace(/^```json/, \"\")\n    .replace(/^```/, \"\")\n    .replace(/```$/, \"\")\n    .trim();\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (err) {\n  // If parsing fails, return the raw text as finalresult\n  parsed = {\n    finalresult: raw,\n    explanation: \"\",\n    title: \"\"\n  };\n}\n\n// Return normalized keys (always provide defaults)\nreturn {\n  title: parsed.title || \"\",\n  finalOutput: parsed.finalresult || \"\",\n  explanation: parsed.explanation || \"\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        -464
+      ],
+      "id": "3a4ee097-2696-4567-98d2-d8613eb0ec1e",
+      "name": "Parse final LLM response"
+    },
+    {
+      "parameters": {
+        "text": "={{ $('Webhook').item.json.body.sourceText }}",
+        "translateTo": "={{ $json.targetLangCode }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.deepL",
+      "typeVersion": 1,
+      "position": [
+        576,
+        -176
+      ],
+      "id": "6f03487c-3906-4707-a86a-2d3a90d56599",
+      "name": "DeepL Translation",
+      "credentials": {
+        "deepLApi": {
+          "id": "9onSm61jly9JEuvG",
+          "name": "DeepL account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=source text to translate:  {{ $('Webhook').item.json.body.sourceText }}\nTarget language: {{ $('Webhook').item.json.body.targetLang }}\nTone: {{ $('Webhook').item.json.body.tone }}\nUse case (where we want to use it): {{ $('Webhook').item.json.body.useCase }}\nTranslation style: {{ $('Webhook').item.json.body.translationStyle }}\n\nPlease always only provide one translation only, never more alternatives and do not preface your translation with anything. Just provide the bare final translation text please.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "={{ $('Brand Guidelines').item.json.brand_guidelines }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1024,
+        -272
+      ],
+      "id": "02aabf98-b276-414c-80da-2ba846fa940e",
+      "name": "Claude Translation",
+      "notesInFlow": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get targetLang from incoming JSON\nconst lang = $('Webhook').first().json.body.targetLang;\n\n// Define mapping\nconst map = {\n  \"English-UK\": \"EN-GB\",\n  \"English-US\": \"EN-US\",\n  \"Spanish\": \"ES\",\n  \"German\": \"DE\",\n  \"French\": \"FR\",\n  \"Italian\": \"IT\",\n  \"Dutch\": \"NL\"\n};\n\n// If no match, fallback to English-US\nconst deeplCode = map[lang] || \"EN-US\";\n\n// Return the updated object\nreturn {\n  ...$json,\n  targetLangCode: deeplCode\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        -176
+      ],
+      "id": "cdab36c3-f3dd-415d-af2c-bf4c65a0a78c",
+      "name": "DeepL Language Codes"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a senior translation quality reviewer. Your task is to analyze two translations of a source text and produce one final, superior version. Combine the best elements of both, fixing any errors and ensuring the tone and style are perfect.\n\nSource Text: {{ $('Webhook').item.json.body.sourceText }}\n\nTranslation A (from DeepL):\n{{ $('DeepL Translation').item.json.text }}\n\nTranslation B (from Claude):\n{{ $('Claude Translation').item.json.text }}\n\nInstructions:\n\nAnalyze both translations for accuracy, grammar, and natural flow.\n\nAdhere to the requested tone: {{ $('Webhook').item.json.body.tone }}\n\nEnsure the translation is suitable for the use case: {{ $('Webhook').item.json.body.useCase }}\n\nCreate a final, polished translation that is better than both inputs.\n\nYour output must be ONLY the final translated text. Do not add any explanations like \"Here is the final version:\".\n\nReturn the response as JSON, with the final result as finalresult, and explanation as explanation of what you did, and referencing any guidelines we specified. also return one field title, which is a short title for this translation.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "={{ $('Brand Guidelines').item.json.brand_guidelines }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1600,
+        -368
+      ],
+      "id": "c72add10-ffe3-477b-b907-799988bcd547",
+      "name": "Final Comparing Agent",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').item.json.body.recordId }}",
+            "Status": "Complete",
+            "DeepL Output": "={{ $('DeepL Translation').item.json.text }}",
+            "Claude Output": "={{ $('Claude Translation').item.json.text }}",
+            "Final Output": "={{ $json.finalOutput }}",
+            "Explanation": "={{ $json.explanation }}",
+            "Title": "={{ $json.title }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Start Translation",
+              "displayName": "Start Translation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2176,
+        -464
+      ],
+      "id": "ae47b3fc-df2c-4699-b537-4361334f4fff",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').item.json.body.recordId }}",
+            "Status": "Translating (DeepL)"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating (DeepL)",
+                  "value": "Translating (DeepL)"
+                },
+                {
+                  "name": "Translating (Claude)",
+                  "value": "Translating (Claude)"
+                },
+                {
+                  "name": "Synthesizing (Final)",
+                  "value": "Synthesizing (Final)"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        128,
+        -176
+      ],
+      "id": "47c15226-337d-426e-af56-28820dfd71e5",
+      "name": "Update Status",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Update Status').item.json.id }}",
+            "Status": "Synthesizing (Final)",
+            "Claude Output": "={{ $json.text }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating (DeepL)",
+                  "value": "Translating (DeepL)"
+                },
+                {
+                  "name": "Translating (Claude)",
+                  "value": "Translating (Claude)"
+                },
+                {
+                  "name": "Synthesizing (Final)",
+                  "value": "Synthesizing (Final)"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1376,
+        -368
+      ],
+      "id": "c91a7ddf-8706-4c2a-9612-0808243f7011",
+      "name": "Update Translations+Status",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Update Status').item.json.id }}",
+            "DeepL Output": "={{ $json.text }}",
+            "Status": "Translating (Claude)"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating (DeepL)",
+                  "value": "Translating (DeepL)"
+                },
+                {
+                  "name": "Translating (Claude)",
+                  "value": "Translating (Claude)"
+                },
+                {
+                  "name": "Synthesizing (Final)",
+                  "value": "Synthesizing (Final)"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        800,
+        -272
+      ],
+      "id": "b3f9d908-ca92-47ef-8491-d0d82d26e2f7",
+      "name": "Update DeepL",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Update Status').item.json.id }}",
+            "Status": "Error",
+            "Explanation": "=DeepL API Error (eg: Credits)"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating",
+                  "value": "Translating"
+                },
+                {
+                  "name": "Synthesizing",
+                  "value": "Synthesizing"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        800,
+        -80
+      ],
+      "id": "050a18d8-6975-4145-922e-9ad51df15e7a",
+      "name": "Update DeepL error msg",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Update Status').item.json.id }}",
+            "Status": "Error",
+            "Explanation": "=Final Claude Agent API Error (eg: Credits)"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating",
+                  "value": "Translating"
+                },
+                {
+                  "name": "Synthesizing",
+                  "value": "Synthesizing"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1952,
+        -272
+      ],
+      "id": "2d30c86d-1617-44bb-b3f9-539ca1ee4cc2",
+      "name": "Update Final Agent Error Msg",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Update Status').item.json.id }}",
+            "Status": "Error",
+            "Explanation": "=Claude API Translation Error (eg: Credits)"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating",
+                  "value": "Translating"
+                },
+                {
+                  "name": "Synthesizing",
+                  "value": "Synthesizing"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1376,
+        -176
+      ],
+      "id": "7d370bed-6ca8-4cae-a27d-c7045eaa8b81",
+      "name": "Update Claude Error",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8c44605a-8f58-4b57-989d-9326b9672f9d",
+              "name": "brand_guidelines",
+              "value": "# System Prompt: ROSENTAL Organics Translation Workflow (All Languages)\n\n## Brand Identity Core\nYou are translating for **ROSENTAL organics**, a natural beauty brand centered on **\"healing beauty\"** – the philosophy that beauty and health are inseparable. The brand positions itself against superficial quick fixes, promoting holistic self-care through natural, effective products.\n\n### Mission & Vision\n- **Mission**: Healing beauty – restoring balance between beauty and health\n- **Vision**: A truly beautiful world – authentic, healthy, mindful\n- **Tagline**: \"Thank yourself later\" (investment in long-term beauty & well-being)\n- **Brand Promise**: Invested in YOUR beauty\n\n### Brand Story Framework\n- **Theme**: Beauty & Healing (deeply connected concepts)\n- **Conflict**: Superficial vs. True Beauty (quick fixes vs. lasting care)\n- **Belief**: Beauty and healthiness should never be at odds\n- **Hero**: Holistic Healing (effective, natural self-care)\n- **Battle Cry**: Thank yourself later\n\n---\n\n## Universal Translation Principles (All Languages)\n\n### 1. **Product Names: NEVER Translate**\n- Keep English product names exactly as written: **\"LED Hair Brush,\" \"Dry Shampoo,\" \"Glow Serum,\" \"Szechuan Mask\"**\n- Do not adapt, translate, or localize product names under any circumstances\n- This applies to all target languages\n\n### 2. **Coherence Over Literal Translation**\n- **Goal**: Natural, fluent text in the target language – not word-for-word translation\n- Adapt sentence structure, idioms, and phrasing to sound native\n- Maintain brand voice while respecting local linguistic conventions\n- Prioritize readability and natural flow\n\n### 3. **Balance Natural + Effective**\n- Always emphasize **both** aspects equally:\n  - **Naturalness**: natural ingredients, cruelty-free, sustainable\n  - **Efficacy**: visible results, proven effects, performance\n- Avoid positioning as \"just natural\" – customers demand products that work\n- Frame as: *\"Natural ingredients that genuinely work\"*\n\n### 4. **Simplify Complexity**\n- Reduce skincare jargon and technical language\n- Make routines accessible, not intimidating\n- Frame multi-step regimens as simple and tailored\n- Use clear explanations over industry terminology\n\n### 5. **Maintain Brand Personality Across Languages**\n- Adapt cultural nuances, but preserve core brand traits:\n  - **Optimistic** (not pessimistic)\n  - **Approachable** (not distant)\n  - **Simple** (not complicated)\n  - **Clever** (not plump/superficial)\n\n---\n\n## Tone & Voice Guidelines\n\n### Brand Personality\n- **Optimistic**: Empowering, positive, forward-looking; conveys confidence in natural beauty's transformative power\n- **Approachable**: Warm, inviting, authentic; creates personal connection without being overly casual\n- **Simple**: Clear language, minimal jargon; makes beauty expertise accessible\n- **Clever**: Smart, refined insights; sophisticated without being pretentious\n\n### What ROSENTAL Is NOT\n- ❌ Pessimistic or fear-based\n- ❌ Distant, clinical, or cold\n- ❌ Complicated or overly technical\n- ❌ Plump, superficial, or gimmicky\n\n### Channel-Specific Tone (Adapt to Local Platform Norms)\n- **Social Media (TikTok/Instagram)**: Casual, engaging, light humor; more relaxed\n- **Website/Newsletter**: Clear, informative, moderately formal; educational\n- **LinkedIn**: Professional, expert-driven, polished; thought leadership\n- **Customer Service**: Understanding, helpful, solution-focused; empathetic\n\n---\n\n## Language & Style Rules (Adapt to Target Language)\n\n### Addressing the Customer\n- **Default approach**: Avoid direct address where possible (creates inclusive, aspirational tone)\n- **When direct address is necessary**: Use informal \"you\" (du/jij/tu) unless market norms require formal\n- **Germany**: Use \"Du/Dir/Dich/Dein\" (capitalized informal)\n- Always try to maintain warmth and personal connection\n\n### Gender-Inclusive Language\n- **General rule**: Use plural forms or neutral alternatives where natural\n- **Exception in German**: Always refer to customers as **\"Kundinnen\"** (feminine plural) – this is a deliberate brand choice\n- Adapt gender approach based on target language conventions (e.g., Spanish, French have gendered nouns)\n- Prioritize inclusive language without making text awkward\n\n### CTAs (Call-to-Actions)\n- **Universal principles**:\n  - Activating and positive\n  - Use action verbs\n  - Keep concise: under 3 words, max 25 characters when possible\n  - Adjectives sparingly, only if they add punch\n- **German examples**:\n  - *\"Jetzt testen\"*\n  - *\"Mehr erfahren\"*\n  - *\"Deal sichern\"*\n  - *\"Join the Club\"*\n- Adapt verb forms and cultural expectations per language\n\n### Emojis\n- **Use sparingly** (max 3 per social post)\n- **Social media captions and email subject lines only** (max 1 in subject)\n- **Never on website or formal communications**\n- Select emojis that align with natural/wellness aesthetic: ☯️ 🤍 🌿 ✨ (when appropriate)\n- Avoid excessive or playful emoji use that undermines premium positioning\n\n### Punctuation & Formatting (Adapt to Local Standards)\n- **Exclamation marks**: Avoid in general; use rarely for emphasis (e.g., \"Join the Club!\")\n- **Dashes**: Use em-dashes for pauses/insertions, not hyphens\n- **Quotation marks**: Follow local conventions (German „\", French « », English \"\", etc.)\n- **Numbers**: Adapt to local format\n  - German: 1.000,00 € (dot thousands, comma decimal)\n  - English: 1,000.00 € (comma thousands, dot decimal)\n  - Add space before currency/percentage in German: 40 %, 190 €\n\n---\n\n## Content Themes to Emphasize (Universal)\n\n### 1. **Holistic Healing & Inner Balance**\n- Beauty as part of overall wellness (81% prioritize health)\n- Healthy skin boosts confidence (90% agreement)\n- Frame skincare as self-care ritual and therapy\n\n### 2. **Natural Effectiveness (Nature-Powered Results)**\n- Natural ingredients that deliver proven results\n- 62% prefer natural cosmetics, but demand efficacy\n- Bridge the \"natural but does it work?\" gap\n\n### 3. **\"Thank Yourself Later\" – Self-Investment Mindset**\n- Long-term approach to beauty and well-being\n- Frame beauty as journey, not quick fix\n- Future-self gratitude messaging\n\n### 4. **Healing Beauty Rituals for Confidence**\n- Skincare routines as confidence-boosting rituals\n- Daily acts of self-care that heal and empower\n- Stress relief through intentional beauty practices\n\n### 5. **Innovation & Curiosity (Modern Natural Solutions)**\n- Cutting-edge natural beauty technology\n- 45% actively follow beauty trends\n- Forward-thinking while staying true to natural values\n\n---\n\n## Persona Alignment (Reference for Tone Calibration)\n\n### Three Core Personas:\n1. **The Self-Healing Believer** (34 years)\n   - Holistic self-care, natural ingredients priority\n   - Emphasize: Ingredient transparency, healing rituals, sustainability\n\n2. **The Well-Ager** (48 years)\n   - Long-term skin vitality, confidence investment\n   - Emphasize: Proven efficacy, visible results, timeless elegance\n\n3. **The Beauty Techie** (38 years)\n   - Innovation-driven, trend-savvy, tech-forward\n   - Emphasize: Innovation, smart routines, cutting-edge natural solutions\n\n**Shared traits across all personas**:\n- Health-conscious (81%)\n- Prefer natural products (62%)\n- Seek proven efficacy\n- Value self-investment\n- Fitness and fashion interest\n\n---\n\n## Market-Specific Guidelines\n\n### NETHERLANDS (Dutch/NL)\n**Customer insight**: *\"Zonder troep – maar het moet wel werken\"* (Without junk – but it must work)\n\n**Specific instructions**:\n- **Maximize established anglicisms** natural to Dutch beauty language\n  - Use \"glow\" over \"glans,\" \"boost\" over \"versterken\"\n- **Simplify skincare complexity** more than in German\n  - *\"Simpel, doeltreffend en afgestemd op jouw huidtype\"*\n- **Emphasize sustainability** more strongly than other markets\n- **Avoid \"voor/na\" (before/after)** – Meta advertising restrictions\n  - Use alternatives: *\"Nu ... Straks,\" \"Vandaag ... Morgen,\" \"Eerste stap ... Volgende stap\"*\n- **CTAs should be particularly direct and benefit-focused**:\n  - *\"Probeer het zelf – zonder gedoe\"*\n  - *\"Perfect voor jouw huidtype\"*\n  - *\"Zichtbaar resultaat vanaf dag één\"*\n\n### UNITED STATES (English/US)\n**Customer insight**: Performance-driven, results-oriented, dynamic communication\n\n**Specific instructions**:\n- **More dynamic and bold language** than European markets\n- **Emphasize performance and visible results** prominently\n- **Use powerful, transformative messaging**:\n  - \"Boost your beauty\"\n  - \"Transform your skin\"\n  - \"Revolutionary natural skincare\"\n- **Quick results messaging** (while maintaining long-term care philosophy)\n- **More direct benefit claims** (within regulatory limits)\n- **Shorter, punchier sentences** than German originals\n\n### GERMANY (German/DE)\n**Customer insight**: Detail-oriented, values transparency and thoroughness\n\n**Specific instructions**:\n- **Source language** – maintain nuanced, thoughtful tone\n- **Longer sentences acceptable** if they add clarity\n- **Detailed product information** expected and valued\n- **Scientific credibility** important (mention studies, ingredients)\n- **\"Kundinnen\" (feminine plural)** for customers – brand standard\n- **Formal communication**: Use \"Du\" (capitalized) when necessary\n\n---\n\n## Visual Brand Elements (Translation Context)\n\n### Design System\n- **Main colors**: Rose (primary), Pure, Avocado, Sand, Soil, Earth\n- **Typography**: Montserrat (Medium for headlines, Regular for body, Light for descriptions)\n- **Patterns**: Organic textures (cream, serum, oil, water) – reference in copy when relevant\n- **Style**: Either \"Rounded\" (soft, organic) or \"Sharp\" (modern, clean) – maintain consistency\n\n### Photography\n- **Color treatment**: Slight tinting in Rose, Avocado, or Sand (10-20%)\n- **Mood**: Natural, authentic, wellness-focused\n- **No stock photo feel** – real, relatable beauty\n\n---\n\n## Dos & Don'ts\n\n### ✅ **DO**\n- Write simply: short sentences, minimal commas (adapt to language norms)\n- Be concise: as much as needed, as little as possible\n- Adapt language to platform (TikTok ≠ LinkedIn ≠ Website)\n- Use terms the target audience understands\n- Emphasize both natural origins AND visible results equally\n- **Always keep product names in English**\n- Make scientific concepts accessible\n- Frame beauty as self-investment, not vanity\n- Use active voice and present tense when possible\n\n### ❌ **DON'T**\n- Use excessive commas or overly complex sentences\n- Overload with information or technical jargon\n- Use unknown abbreviations without definition\n- **Translate product names** (critical error)\n- Use before/after language in restricted markets\n- Use excessive exclamation marks\n- Be distant, overly formal, or complicated\n- Make unrealistic promises or overhype\n- Use overly flowery or \"beauty magazine\" clichés\n- Diminish efficacy in favor of \"natural only\" positioning\n\n---\n\n## Vocabulary Preferences (German Reference – Adapt to Target Language)\n\n| **AVOID** | **USE INSTEAD** | **RATIONALE** |\n|-----------|-----------------|---------------|\n| Wellbeing | Healing | More aligned with brand mission |\n| Kunde/Kunden | Kundinnen | Brand standard (German only) |\n| umfassend / komplett | ganzheitlich / holistic | Holistic = key brand concept |\n| pflanzlich | natürlich | Broader, more accurate |\n| umweltschonend | nachhaltig / ökologisch | More contemporary |\n| CO2-Fußabdruck | Ökologischer Fußabdruck | Broader environmental impact |\n| Einfluss | Wirkung | More concrete/measurable |\n| erschwinglich | günstig / preiswert | Less premium-diluting |\n\n*(Adapt this table for each target language based on similar semantic distinctions)*\n\n---\n\n## Special Content Guidelines\n\n### Citing Studies\n- **Be precise but accessible**: Author, publication, year\n- **Only cite relevant studies** that support product claims\n- **Make scientific credibility approachable**:\n  - *\"A 2021 study published in the Journal of Dermatological Research shows that natural rose extract can improve skin elasticity by up to 30%.\"*\n\n### Sale Communications\n- **Transparent and honest** – no hidden conditions\n- **Avoid asterisks and fine print** where possible\n- **State limitations clearly** in main copy:\n  - *\"This 40% discount applies to our bestseller collection and cannot be combined with other offers.\"*\n\n### Social Media Specifics\n- **Instagram/TikTok**: Visual storytelling, lifestyle content, behind-the-scenes, quick tips\n- **LinkedIn**: Company news, industry insights, expert interviews, ingredient deep-dives (INCI Talks)\n- **Website**: Premium content, detailed articles, studies, expert interviews\n- **Newsletter**: Exclusive insights, product updates, announcements\n\n---\n\n## Translation Workflow Checklist\n\n1. ✅ **Read source text fully** – understand context and intent\n2. ✅ **Identify product names** → keep in English (never translate)\n3. ✅ **Determine channel/format** → adapt tone accordingly\n4. ✅ **Simplify where possible** → reduce complexity, improve flow\n5. ✅ **Apply market-specific guidelines** → Dutch/US/DE adjustments\n6. ✅ **Balance natural + effective** → equal emphasis on both\n7. ✅ **Ensure native fluency** → not literal translation\n8. ✅ **Optimize CTAs** → activating, concise, benefit-focused\n9. ✅ **Review brand consistency** → optimistic, approachable, clever\n10. ✅ **Check formatting** → numbers, punctuation, local conventions\n\n---\n\n## Core Messaging Hierarchy (Adapt Language, Preserve Structure)\n\n### Brand Promise\n**Invested in YOUR beauty**\n\n### Emotional Benefits\n1. **True-Beauty Confidence**: Become the most beautiful you\n2. **Holistic Balance**: Restore and keep your balance\n3. **Beauty Without Risks**: Outer beauty, inner peace\n\n### Functional Benefits\n1. **Natural Effectiveness**: Natural effects that actually work\n2. **Holistic Healing**: Holistic treatments healing body and soul\n3. **Beauty Innovation**: Pioneering beauty innovation\n\n### Reasons to Believe\n1. Effective natural ingredients, formulas, and tools inspired by nature\n2. Holistic healing philosophy and wide product offerings (skincare, haircare, supplements, tools)\n3. Trendsetting through continuous leadership in natural beauty innovation\n\n---\n\n**Your mission**: Create translations that feel native, on-brand, and conversion-optimized while staying true to ROSENTAL's \"healing beauty\" philosophy. Prioritize clarity, cultural relevance, and natural flow over word-for-word accuracy. Each translation should sound like it was originally written in the target language by someone who deeply understands both the brand and the local market.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        -176
+      ],
+      "id": "7536eae3-58b6-4a27-a995-019e48db8e2e",
+      "name": "Brand Guidelines"
+    },
+    {
+      "parameters": {
+        "content": "## BRAND GUIDELINES\n**Double click** to edit me. ",
+        "height": 256,
+        "width": 288,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        -272
+      ],
+      "id": "157ac5e6-0460-4902-b426-194c5e4a3ef4",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.srv1029933.hstgr.cloud",
+            "user-agent": "Mozilla/5.0 (compatible; AirtableScripting; +https://airtable.com/developers/scripting;)",
+            "content-length": "546",
+            "accept": "*/*",
+            "accept-encoding": "gzip,deflate",
+            "content-type": "application/json",
+            "x-airtable-source": "appqM5iiz1iyo3Jen/wflxGeLG06C1AafNA",
+            "x-forwarded-for": "54.172.39.175",
+            "x-forwarded-host": "n8n.srv1029933.hstgr.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "e09aa142c744",
+            "x-real-ip": "54.172.39.175"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "recordId": "recScv1AYtbqV21M9",
+            "sourceText": "Natürlicher Wirkstoffkomplex für ein gesundes Nerven‑⁶und Immunsystem², schöne Haut¹ ⁴, Zellschutz³ und eine gesunde Verdauung⁵.\n\nEssenzielle Kombination aus Biotin, Vitamin C, 5-HTP und Pflanzenextrakten mit hoher Bioverfügbarkeit. Unterstützt Nerven‑⁶ und Immunsystem², deine Psyche², eine gesunde Verdauung⁵ und den Zellschutz³. 100 % vegan, natürlich und frei von Gentechnik.",
+            "targetLang": "English-US",
+            "tone": "Promotional",
+            "useCase": "Ads",
+            "translationStyle": "Free"
+          },
+          "webhookUrl": "https://n8n.srv1029933.hstgr.cloud/webhook/translationreq",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Brand Guidelines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Claude Translation",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Final Comparing Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepL Translation": {
+      "main": [
+        [
+          {
+            "node": "Update DeepL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update DeepL error msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Translation": {
+      "main": [
+        [
+          {
+            "node": "Update Translations+Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Claude Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepL Language Codes": {
+      "main": [
+        [
+          {
+            "node": "DeepL Translation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Comparing Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse final LLM response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Final Agent Error Msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse final LLM response": {
+      "main": [
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status": {
+      "main": [
+        [
+          {
+            "node": "DeepL Language Codes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Translations+Status": {
+      "main": [
+        [
+          {
+            "node": "Final Comparing Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update DeepL": {
+      "main": [
+        [
+          {
+            "node": "Claude Translation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brand Guidelines": {
+      "main": [
+        [
+          {
+            "node": "Update Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3ac7943c-f05f-46e9-894c-8893053415c9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7ccd564732cc30538297b719b11b4bda8657febe7bcff97f15e90642fadbb3fb"
+  },
+  "id": "wFsfqSNNFnwRoTnn",
+  "tags": []
+}
