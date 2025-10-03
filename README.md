@@ -5,28 +5,25 @@ A small library of production-tested n8n workflows I run for clients and for my 
 ## Automation Catalog
 
 ### Airtable · Claude · DeepL Translation Agent
-- **File**: `Airtable-Claude-DeepL Translation Agent Workflow.json`
-- **Trigger & Inputs**: POST webhook at `translationreq`; Airtable record ID, source text, target language label, tone, use case, translation style.
-- **Flow Highlights**: Stamps Airtable status to "Translating (DeepL)", maps human language names to DeepL codes, runs DeepL and Claude in parallel, injects ROSENTAL Organics brand guardrails, then asks a "Final Comparing Agent" to fuse the best of both translations.
-- **Outputs**: Updates the originating Airtable row (`Translation Requests` table) with DeepL/Claude/raw comparison, the polished final copy, title headline, and an explanation of revisions.
-- **Resilience**: Dedicated branches capture DeepL/Claude/final-agent errors, push readable diagnostics back to Airtable, and prevent stalled jobs by marking the record status accordingly.
-- **Dependencies**: Airtable token with write scope, DeepL API key, Anthropic Claude Sonnet 4 via n8n LangChain nodes.
+- **In plain words**: Turns Airtable translation requests into polished, on-brand copy by letting both DeepL and Claude take a pass before choosing the best version.
+- **How it works**: A webhook call moves the Airtable record to "Translating (DeepL)", maps the requested language to DeepL codes, runs DeepL and a Claude prompt that includes ROSENTAL Organics brand guidelines, then asks a "Final Comparing Agent" to fuse the strongest lines from both outputs.
+- **Outputs**: Writes DeepL, Claude, and final translations plus a title and short rationale back to the original Airtable row in the `Translation Requests` table.
+- **Safeguards**: Error branches catch issues in DeepL, Claude, or the final agent, update Airtable with human-readable diagnostics, and prevent jobs from stalling.
+- **Dependencies**: Airtable token with write scope, DeepL API key, and Anthropic Claude Sonnet 4 credentials configured in n8n LangChain nodes.
 
 ### Instagram Lead Personalized Email Generator
-- **File**: `Instagram Lead Personalized Email Generator.json`
-- **Trigger & Inputs**: POST webhook at `samsurvey`; survey answers (business type, goals, revenue), respondent email, Instagram handle, attribution IP.
-- **Flow Highlights**: Screens out low-value geographies with an IP lookup, normalises the Instagram handle, launches an Apify Instagram-scraper actor, waits for dataset readiness, then feeds survey answers + live profile stats into an LLM briefed to write a 50–80 word outreach email that sounds like "Sam".
-- **Outputs**: Sends HTML-formatted email content through LeadConnector (`/hooks/.../708ae76a...`), mirrors a markdown-safe version to Telegram for QA, and keeps original + cleaned handles for auditing.
-- **Quality Controls**: LLM returns `NOT ENOUGH INFORMATION` when inputs are incomplete; an IF gate blocks delivery and surfaces the case for manual follow-up.
-- **Dependencies**: Apify actor token, OpenRouter Anthropic credentials, LeadConnector webhook, Telegram bot token/chat ID. Update the country allow/deny lists in the `Country Check` code node to reflect your lead strategy.
+- **In plain words**: Converts a lead’s survey answers and Instagram profile into a short, friendly outreach email that sounds like "Sam" and sends it automatically.
+- **How it works**: After a survey webhook hits `samsurvey`, the flow screens out low-priority regions via an IP lookup, cleans the Instagram handle, launches an Apify scraper for profile stats, and feeds survey answers plus top posts into an LLM briefed to stay under 80 words.
+- **Outputs**: Delivers formatted HTML to LeadConnector for emailing and forwards a Telegram-ready Markdown copy for quick review, keeping both the raw and cleaned handles for context.
+- **Quality controls**: If the LLM reports `NOT ENOUGH INFORMATION`, an IF node stops the send so you can follow up manually, rather than shipping a weak email.
+- **Dependencies**: Apify actor token, OpenRouter Anthropic access, LeadConnector webhook URL, and Telegram bot credentials; adjust the allow/deny country lists in the `Country Check` node to suit your campaign.
 
 ### Zoho CRM LLM Lead Enrich Agent
-- **File**: `ZohoCRM LLM Lead Enrich Agent.json`
-- **Trigger & Inputs**: POST webhook at `leadenrich523213`; Zoho lead ID, lead name, company, optional website and LinkedIn URL.
-- **Flow Highlights**: Introduces a random 10–120s delay to fan out load, checks a local n8n Data Table to avoid reprocessing the same name/company, then orchestrates three research passes through OpenRouter (Perplexity Sonar Pro, Claude Sonnet, Gemini 2.5). Each pass must return strict JSON; custom parsers strip markdown fences and citation markers.
-- **Intelligence Layer**: A scoring code node compares the LLM outputs field-by-field, rewards specificity (dates, roles, sector keywords), merges the strongest answer set, and records which model won.
-- **Outputs**: Updates Zoho CRM custom fields (`Company_Summary`, `Investment_Sectors_LLM`, `Ticket_Size_LLM`, `Investment_Stage_LLM1`, `Joining_Firm`, `Investment_Criteria`) and core fields (`Designation`, `Description`), then logs the processed lead into the data table for dedupe.
-- **Dependencies**: Zoho OAuth app with lead write scope, OpenRouter API key, n8n Data Tables project (`stored leadnames dedupe`). Adjust the Zoho field IDs and data table ID to fit your environment.
+- **In plain words**: Looks up new venture leads, summarises what the firm does, and fills in the missing details inside Zoho CRM automatically.
+- **How it works**: A webhook call triggers a random 10–120 second delay to spread API load, checks an n8n Data Table so repeat leads are skipped, then runs three OpenRouter models (Perplexity, Claude, Gemini) with JSON-only prompts and custom parsers that strip markdown.
+- **Outputs**: Scores the three responses, keeps the most complete set, updates Zoho CRM custom fields (`Company_Summary`, `Investment_Sectors_LLM`, `Ticket_Size_LLM`, `Investment_Stage_LLM1`, `Joining_Firm`, `Investment_Criteria`) plus `Designation` and `Description`, and logs the lead to the dedupe table.
+- **Safeguards**: Dedupe checks prevent double processing, the scoring script rewards precise roles/dates/sector keywords, and metadata records which model produced the chosen answer.
+- **Dependencies**: Zoho OAuth app with lead write scope, OpenRouter API key, and access to the n8n Data Table project (`stored leadnames dedupe`); update field IDs and table references to match your environment.
 
 ## Shared Setup
 - Import any JSON file into n8n (`Workflows → Import from file`).
