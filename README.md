@@ -17,6 +17,8 @@ A small library of production-tested n8n workflows I run for clients and my own 
 
 **How it works**: A webhook call moves the Airtable record to "Translating (DeepL)", maps the requested language to DeepL codes, runs DeepL and a Claude prompt that includes ROSENTAL Organics brand guidelines, then asks a "Final Comparing Agent" to fuse the strongest lines from both outputs.
 
+**Workflow JSON**: [`Airtable-Claude-DeepL Translation Agent Workflow.json`](./Airtable-Claude-DeepL%20Translation%20Agent%20Workflow.json)
+
 **Outputs**: Writes DeepL, Claude, and final translations plus a title and short rationale back to the original Airtable row in the `Translation Requests` table.
 
 **Safeguards**: Error branches catch issues in DeepL, Claude, or the final agent, update Airtable with human-readable diagnostics, and prevent jobs from stalling.
@@ -32,6 +34,8 @@ A small library of production-tested n8n workflows I run for clients and my own 
 
 **How it works**: After a survey webhook hits `samsurvey`, the flow screens out low-priority regions via an IP lookup, cleans the Instagram handle, launches an Apify scraper for profile stats, and feeds survey answers plus top posts into an LLM briefed to stay under 80 words.
 
+**Workflow JSON**: [`Instagram Lead Personalized Email Generator.json`](./Instagram%20Lead%20Personalized%20Email%20Generator.json)
+
 **Outputs**: Delivers formatted HTML to LeadConnector for emailing and forwards a Telegram-ready Markdown copy for quick review, keeping both the raw and cleaned handles for context.
 
 **Quality controls**: If the LLM reports `NOT ENOUGH INFORMATION`, an IF node stops the send so you can follow up manually instead of shipping a weak email.
@@ -46,6 +50,8 @@ A small library of production-tested n8n workflows I run for clients and my own 
 **Why it matters**: Saves the venture capital firm hundreds of hours of manual research and data entry, so investors can focus on evaluating deals instead of copying information into the CRM.
 
 **How it works**: A webhook call triggers a random 10–120 second delay to spread API load, checks an n8n Data Table so repeat leads are skipped, then runs three OpenRouter models (Perplexity, Claude, Gemini) with JSON-only prompts and custom parsers that strip markdown.
+
+**Workflow JSON**: [`ZohoCRM LLM Lead Enrich Agent.json`](./ZohoCRM%20LLM%20Lead%20Enrich%20Agent.json)
 
 **Outputs**: Scores the three responses, keeps the most complete set, updates Zoho CRM custom fields (`Company_Summary`, `Investment_Sectors_LLM`, `Ticket_Size_LLM`, `Investment_Stage_LLM1`, `Joining_Firm`, `Investment_Criteria`) plus `Designation` and `Description`, and logs the lead to the dedupe table.
 
