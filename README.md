@@ -2,6 +2,12 @@
 
 A small library of production-tested n8n workflows I run for clients and my own stack. Every flow blends webhooks, external APIs, and LLM agents to close a specific gap in marketing or RevOps processes.
 
+- [Airtable · Claude · DeepL Translation Agent](#airtable--claude--deepl-translation-agent)
+- [Instagram Lead Personalized Email Generator](#instagram-lead-personalized-email-generator)
+- [Zoho CRM LLM Lead Enrich Agent](#zoho-crm-llm-lead-enrich-agent)
+- [Shared Setup](#shared-setup)
+- [Operating Notes](#operating-notes)
+
 ## Automation Catalog
 
 ### Airtable · Claude · DeepL Translation Agent
