@@ -10,8 +10,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -320,
-        -176
+        -816,
+        -448
       ],
       "id": "fc582850-c0ab-41be-a7ef-0c440f244696",
       "name": "Webhook",
@@ -19,84 +19,35 @@
     },
     {
       "parameters": {
-        "model": {
-          "__rl": true,
-          "value": "claude-sonnet-4-20250514",
-          "mode": "list",
-          "cachedResultName": "Claude Sonnet 4"
-        },
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
-      "typeVersion": 1.3,
-      "position": [
-        1096,
-        -48
-      ],
-      "id": "7157bcd8-c625-4b03-aaeb-73d02f2bfc26",
-      "name": "Anthropic Chat Model",
-      "credentials": {
-        "anthropicApi": {
-          "id": "2KbDDoUTEGcdEa6G",
-          "name": "Anthropic account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "model": {
-          "__rl": true,
-          "value": "claude-sonnet-4-20250514",
-          "mode": "list",
-          "cachedResultName": "Claude Sonnet 4"
-        },
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
-      "typeVersion": 1.3,
-      "position": [
-        1672,
-        -144
-      ],
-      "id": "4f01ac75-e925-42eb-b249-79e968b9ab95",
-      "name": "Anthropic Chat Model1",
-      "credentials": {
-        "anthropicApi": {
-          "id": "2KbDDoUTEGcdEa6G",
-          "name": "Anthropic account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// LLM response string\nlet raw = $json[\"text\"] || \"\";\n\n// Clean whitespace\nraw = raw.trim();\n\n// Remove ```json fences if present\nif (raw.startsWith(\"```\")) {\n  raw = raw\n    .replace(/^```json/, \"\")\n    .replace(/^```/, \"\")\n    .replace(/```$/, \"\")\n    .trim();\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (err) {\n  // If parsing fails, return the raw text as finalresult\n  parsed = {\n    finalresult: raw,\n    explanation: \"\",\n    title: \"\"\n  };\n}\n\n// Return normalized keys (always provide defaults)\nreturn {\n  title: parsed.title || \"\",\n  finalOutput: parsed.finalresult || \"\",\n  explanation: parsed.explanation || \"\"\n};"
+        "jsCode": "// LLM response string\nlet raw = $json[\"text\"] || \"\";\n\n// Clean whitespace\nraw = raw.trim();\n\n// Remove ```json fences if present\nif (raw.startsWith(\"```\")) {\n  raw = raw\n    .replace(/^```json/, \"\")\n    .replace(/^```/, \"\")\n    .replace(/```$/, \"\")\n    .trim();\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (err) {\n  // If parsing fails, return the raw text as finalresult\n  parsed = {\n    finalresult: raw,\n    explanation: \"\"\n  };\n}\n\n// Return normalized keys (always provide defaults)\nreturn {\n  finalOutput: parsed.finalresult || \"\",\n  explanation: parsed.explanation || \"\"\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1952,
-        -464
+        2128,
+        -736
       ],
       "id": "3a4ee097-2696-4567-98d2-d8613eb0ec1e",
       "name": "Parse final LLM response"
     },
     {
       "parameters": {
-        "text": "={{ $('Webhook').item.json.body.sourceText }}",
-        "translateTo": "={{ $json.targetLangCode }}",
+        "text": "={{ $('Webhook').first().json.body.sourceText }}",
+        "translateTo": "={{ $('DeepL Language Codes').first().json.targetLangCode }}",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.deepL",
       "typeVersion": 1,
       "position": [
-        576,
-        -176
+        528,
+        -448
       ],
       "id": "6f03487c-3906-4707-a86a-2d3a90d56599",
       "name": "DeepL Translation",
+      "executeOnce": true,
       "credentials": {
         "deepLApi": {
-          "id": "9onSm61jly9JEuvG",
+          "id": "aFy65s7P8M9h9SKh",
           "name": "DeepL account"
         }
       },
@@ -105,11 +56,11 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=source text to translate:  {{ $('Webhook').item.json.body.sourceText }}\nTarget language: {{ $('Webhook').item.json.body.targetLang }}\nTone: {{ $('Webhook').item.json.body.tone }}\nUse case (where we want to use it): {{ $('Webhook').item.json.body.useCase }}\nTranslation style: {{ $('Webhook').item.json.body.translationStyle }}\n\nPlease always only provide one translation only, never more alternatives and do not preface your translation with anything. Just provide the bare final translation text please.",
+        "text": "=source text to translate:  {{ $('Webhook').first().json.body.sourceText }}\nTarget language: {{ $('Webhook').first().json.body.targetLang }}\nTone: {{ $('Parse Prompts').first().json.tone_instructions }}\nUse case (where we want to use it):  {{ $('Parse Prompts').first().json.usecase_instructions }}\nTranslation style: {{ $('Parse Prompts').first().json.style_instructions }}\nPlease always only provide one translation only, never more alternatives and do not preface your translation with anything. Just provide the bare final translation text please.\n\nPlease return the response as JSON, with the translated text as var text, and a short title for the translation as var title.",
         "messages": {
           "messageValues": [
             {
-              "message": "={{ $('Brand Guidelines').item.json.brand_guidelines }}"
+              "message": "={{ $('Parse Prompts').item.json.brand_instructions }}"
             }
           ]
         },
@@ -118,8 +69,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1024,
-        -272
+        976,
+        -544
       ],
       "id": "02aabf98-b276-414c-80da-2ba846fa940e",
       "name": "Claude Translation",
@@ -128,13 +79,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get targetLang from incoming JSON\nconst lang = $('Webhook').first().json.body.targetLang;\n\n// Define mapping\nconst map = {\n  \"English-UK\": \"EN-GB\",\n  \"English-US\": \"EN-US\",\n  \"Spanish\": \"ES\",\n  \"German\": \"DE\",\n  \"French\": \"FR\",\n  \"Italian\": \"IT\",\n  \"Dutch\": \"NL\"\n};\n\n// If no match, fallback to English-US\nconst deeplCode = map[lang] || \"EN-US\";\n\n// Return the updated object\nreturn {\n  ...$json,\n  targetLangCode: deeplCode\n};"
+        "jsCode": "// Get targetLang from incoming JSON\nconst lang = $('Webhook').first().json.body.targetLang;\n\n// Define mapping (friendly name → DeepL code)\nconst map = {\n  \"Arabic\": \"AR\",\n  \"Bulgarian\": \"BG\",\n  \"Czech\": \"CS\",\n  \"Danish\": \"DA\",\n  \"German\": \"DE\",\n  \"Greek\": \"EL\",\n  \"English\": \"EN\",\n  \"English-UK\": \"EN-GB\",\n  \"English-US\": \"EN-US\",\n  \"Spanish\": \"ES\",\n  \"Spanish-LATAM\": \"ES-419\",\n  \"Estonian\": \"ET\",\n  \"Finnish\": \"FI\",\n  \"French\": \"FR\",\n  \"Hebrew\": \"HE\",\n  \"Hungarian\": \"HU\",\n  \"Indonesian\": \"ID\",\n  \"Italian\": \"IT\",\n  \"Japanese\": \"JA\",\n  \"Korean\": \"KO\",\n  \"Lithuanian\": \"LT\",\n  \"Latvian\": \"LV\",\n  \"Norwegian\": \"NB\",\n  \"Dutch\": \"NL\",\n  \"Polish\": \"PL\",\n  \"Portuguese\": \"PT\",\n  \"Portuguese-BR\": \"PT-BR\",\n  \"Portuguese-PT\": \"PT-PT\",\n  \"Romanian\": \"RO\",\n  \"Russian\": \"RU\",\n  \"Slovak\": \"SK\",\n  \"Slovenian\": \"SL\",\n  \"Swedish\": \"SV\",\n  \"Thai\": \"TH\",\n  \"Turkish\": \"TR\",\n  \"Ukrainian\": \"UK\",\n  \"Vietnamese\": \"VI\",\n  \"Chinese\": \"ZH\",\n  \"Chinese-Simplified\": \"ZH-HANS\",\n  \"Chinese-Traditional\": \"ZH-HANT\"\n};\n\n// Normalize input (so \"english-us\" or \"ENGLISH-US\" still works)\nconst key = lang ? lang.trim() : \"\";\nconst deeplCode = map[key] || \"EN-US\";  // fallback\n\n// Return enriched object\nreturn {\n  ...$json,\n  targetLangCode: deeplCode\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        352,
-        -176
+        80,
+        -448
       ],
       "id": "cdab36c3-f3dd-415d-af2c-bf4c65a0a78c",
       "name": "DeepL Language Codes"
@@ -142,11 +93,11 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a senior translation quality reviewer. Your task is to analyze two translations of a source text and produce one final, superior version. Combine the best elements of both, fixing any errors and ensuring the tone and style are perfect.\n\nSource Text: {{ $('Webhook').item.json.body.sourceText }}\n\nTranslation A (from DeepL):\n{{ $('DeepL Translation').item.json.text }}\n\nTranslation B (from Claude):\n{{ $('Claude Translation').item.json.text }}\n\nInstructions:\n\nAnalyze both translations for accuracy, grammar, and natural flow.\n\nAdhere to the requested tone: {{ $('Webhook').item.json.body.tone }}\n\nEnsure the translation is suitable for the use case: {{ $('Webhook').item.json.body.useCase }}\n\nCreate a final, polished translation that is better than both inputs.\n\nYour output must be ONLY the final translated text. Do not add any explanations like \"Here is the final version:\".\n\nReturn the response as JSON, with the final result as finalresult, and explanation as explanation of what you did, and referencing any guidelines we specified. also return one field title, which is a short title for this translation.",
+        "text": "=You are a senior translation quality reviewer. Your task is to analyze two translations of a source text and produce one final, superior version. Combine the best elements of both, fixing any errors and ensuring the tone and style are perfect.\n\nSource Text: {{ $('Webhook').first().json.body.sourceText }}\n\nTranslation A (from DeepL):\n{{ $('DeepL Translation').first().json.text }}\n\nTranslation B (from Claude):\n{{ $('Parse').first().json.text }}\n\nInstructions:\n\nAnalyze both translations for accuracy, grammar, and natural flow.\n\nAdhere to the requested tone: {{ $('Parse Prompts').first().json.tone_instructions }}\nEnsure the translation is suitable for the use case: {{ $('Parse Prompts').first().json.usecase_instructions }}\n\nTranslation Style: {{ $('Parse Prompts').first().json.style_instructions }}\n\nCreate a final, polished translation that is better than both inputs.\n\nYour output must be ONLY the final translated text. Do not add any explanations like \"Here is the final version:\".\n\nReturn the response as JSON, with the final result as finalresult, and explanation as explanation of what you did, and referencing any guidelines we specified.\n\nFor the explanation please have more proper line-breaks in order to display the explanation in a way that is more easy to digest.",
         "messages": {
           "messageValues": [
             {
-              "message": "={{ $('Brand Guidelines').item.json.brand_guidelines }}"
+              "message": "={{ $('Parse Prompts').item.json.brand_instructions }}"
             }
           ]
         },
@@ -155,8 +106,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1600,
-        -368
+        1776,
+        -640
       ],
       "id": "c72add10-ffe3-477b-b907-799988bcd547",
       "name": "Final Comparing Agent",
@@ -182,13 +133,10 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "id": "={{ $('Webhook').item.json.body.recordId }}",
+            "id": "={{ $('Webhook').first().json.body.recordId }}",
             "Status": "Complete",
-            "DeepL Output": "={{ $('DeepL Translation').item.json.text }}",
-            "Claude Output": "={{ $('Claude Translation').item.json.text }}",
             "Final Output": "={{ $json.finalOutput }}",
-            "Explanation": "={{ $json.explanation }}",
-            "Title": "={{ $json.title }}"
+            "Explanation": "={{ $json.explanation }}"
           },
           "matchingColumns": [
             "id"
@@ -213,7 +161,7 @@
               "display": true,
               "type": "string",
               "readOnly": false,
-              "removed": false
+              "removed": true
             },
             {
               "id": "Source Text",
@@ -395,7 +343,7 @@
               "display": true,
               "type": "string",
               "readOnly": false,
-              "removed": false
+              "removed": true
             },
             {
               "id": "Claude Output",
@@ -406,7 +354,7 @@
               "display": true,
               "type": "string",
               "readOnly": false,
-              "removed": false
+              "removed": true
             },
             {
               "id": "Final Output",
@@ -450,8 +398,8 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        2176,
-        -464
+        2352,
+        -736
       ],
       "id": "ae47b3fc-df2c-4699-b537-4361334f4fff",
       "name": "Update record",
@@ -482,7 +430,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "id": "={{ $('Webhook').item.json.body.recordId }}",
+            "id": "={{ $('Webhook').first().json.body.recordId }}",
             "Status": "Translating (DeepL)"
           },
           "matchingColumns": [
@@ -746,8 +694,8 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        128,
-        -176
+        304,
+        -448
       ],
       "id": "47c15226-337d-426e-af56-28820dfd71e5",
       "name": "Update Status",
@@ -780,7 +728,8 @@
           "value": {
             "id": "={{ $('Update Status').item.json.id }}",
             "Status": "Synthesizing (Final)",
-            "Claude Output": "={{ $json.text }}"
+            "Claude Output": "={{ $json.text }}",
+            "Title": "={{ $json.title }}"
           },
           "matchingColumns": [
             "id"
@@ -805,7 +754,7 @@
               "display": true,
               "type": "string",
               "readOnly": false,
-              "removed": true
+              "removed": false
             },
             {
               "id": "Source Text",
@@ -1043,8 +992,8 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        1376,
-        -368
+        1552,
+        -640
       ],
       "id": "c91a7ddf-8706-4c2a-9612-0808243f7011",
       "name": "Update Translations+Status",
@@ -1340,8 +1289,8 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        800,
-        -272
+        752,
+        -544
       ],
       "id": "b3f9d908-ca92-47ef-8491-d0d82d26e2f7",
       "name": "Update DeepL",
@@ -1633,8 +1582,8 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        800,
-        -80
+        752,
+        -352
       ],
       "id": "050a18d8-6975-4145-922e-9ad51df15e7a",
       "name": "Update DeepL error msg",
@@ -1926,8 +1875,8 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        1952,
-        -272
+        2128,
+        -544
       ],
       "id": "2d30c86d-1617-44bb-b3f9-539ca1ee4cc2",
       "name": "Update Final Agent Error Msg",
@@ -2219,8 +2168,8 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        1376,
-        -176
+        1328,
+        -448
       ],
       "id": "7d370bed-6ca8-4cae-a27d-c7045eaa8b81",
       "name": "Update Claude Error",
@@ -2228,6 +2177,59 @@
         "airtableTokenApi": {
           "id": "btjym2luT5VVB0XD",
           "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// LLM response string\nlet raw = $json[\"text\"] || \"\";\n\n// Clean whitespace\nraw = raw.trim();\n\n// Remove ```json fences if present\nif (raw.startsWith(\"```\")) {\n  raw = raw\n    .replace(/^```json/, \"\")\n    .replace(/^```/, \"\")\n    .replace(/```$/, \"\")\n    .trim();\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (err) {\n  // If parsing fails, return the raw text as finalresult\n  parsed = {\n    text: raw,\n    title: \"\"\n  };\n}\n\n// Return normalized keys (always provide defaults)\nreturn {\n  title: parsed.title || \"\",\n  text: parsed.text || \"\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        -640
+      ],
+      "id": "5e9ee07c-a4d4-41da-9ee3-1f0992aac440",
+      "name": "Parse"
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-sonnet-4.5",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -320
+      ],
+      "id": "b43f8137-9842-457c-a934-c32e0fdcc93b",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "1uB0b5y9B0KxbUpT",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-sonnet-4.5",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        -416
+      ],
+      "id": "dba7fc3d-007d-408c-bde3-c34b4e5792f9",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "1uB0b5y9B0KxbUpT",
+          "name": "OpenRouter account"
         }
       }
     },
@@ -2248,27 +2250,359 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -96,
-        -176
+        -816,
+        -960
       ],
       "id": "7536eae3-58b6-4a27-a995-019e48db8e2e",
-      "name": "Brand Guidelines"
+      "name": "Copy of Brand Guidelines (Not Used Here)"
     },
     {
       "parameters": {
-        "content": "## BRAND GUIDELINES\n**Double click** to edit me. ",
-        "height": 256,
-        "width": 288,
-        "color": 3
+        "jsCode": "// Inputs from webhook or previous node\nconst toneInput = $('Webhook').first().json.body.tone;\nconst useCaseInput = $('Webhook').first().json.body.useCase;\nconst styleInput = $('Webhook').first().json.body.translationStyle;\n\nconst records = $input.all();\n\n// Helper to find record by matching its Name (case-insensitive)\nconst findRecord = (name) => {\n  if (!name) return null;\n  return records.find(r =>\n    r.json.Name.toLowerCase().trim() === name.toLowerCase().trim()\n  );\n};\n\n// Extract each one\nconst tone = findRecord(toneInput);\nconst useCase = findRecord(useCaseInput);\nconst style = findRecord(styleInput);\nconst brand = records.find(r =>\n  r.json.Name.toLowerCase().includes(\"brand\")\n);\n\n// Return unified output\nreturn [\n  {\n    json: {\n      brand_name: brand?.json.Name || \"\",\n      brand_instructions: brand?.json.Instructions || \"\",\n\n      tone_name: tone?.json.Name || \"\",\n      tone_instructions: tone?.json.Instructions || \"\",\n\n      style_name: style?.json.Name || \"\",\n      style_instructions: style?.json.Instructions || \"\",\n\n      usecase_name: useCase?.json.Name || \"\",\n      usecase_instructions: useCase?.json.Instructions || \"\"\n    }\n  }\n];"
       },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        -192,
-        -272
+        -144,
+        -448
       ],
-      "id": "157ac5e6-0460-4902-b426-194c5e4a3ef4",
-      "name": "Sticky Note"
+      "id": "56f8d86e-3887-4f52-8e7a-aca54f789b52",
+      "name": "Parse Prompts"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.body.recordId }}",
+            "Status": "Getting Instructions"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating (DeepL)",
+                  "value": "Translating (DeepL)"
+                },
+                {
+                  "name": "Translating (Claude)",
+                  "value": "Translating (Claude)"
+                },
+                {
+                  "name": "Synthesizing (Final)",
+                  "value": "Synthesizing (Final)"
+                },
+                {
+                  "name": "Getting Instructions",
+                  "value": "Getting Instructions"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -592,
+        -448
+      ],
+      "id": "37e25870-1a7f-4e7b-ab7a-384b39a41f6c",
+      "name": "Update Status -> Getting Prompts",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl8Ps9bpMX2J5SPz",
+          "mode": "list",
+          "cachedResultName": "Guidelines",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbl8Ps9bpMX2J5SPz"
+        },
+        "filterByFormula": "={{ \n  `OR(\n    {Name} = \"Brand Guidelines\",\n    {Name} = \"${$('Webhook').first().json.body.tone}\",\n    {Name} = \"${$('Webhook').first().json.body.useCase}\",\n    {Name} = \"${$('Webhook').first().json.body.translationStyle}\"\n  )`\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        -448
+      ],
+      "id": "f0b0894d-b2c4-4d66-b160-796ac0fa86cb",
+      "name": "Get Prompts",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
     }
   ],
   "pinData": {
@@ -2278,23 +2612,23 @@
           "headers": {
             "host": "n8n.srv1029933.hstgr.cloud",
             "user-agent": "Mozilla/5.0 (compatible; AirtableScripting; +https://airtable.com/developers/scripting;)",
-            "content-length": "546",
+            "content-length": "337",
             "accept": "*/*",
             "accept-encoding": "gzip,deflate",
             "content-type": "application/json",
             "x-airtable-source": "appqM5iiz1iyo3Jen/wflxGeLG06C1AafNA",
-            "x-forwarded-for": "54.172.39.175",
+            "x-forwarded-for": "3.238.118.177",
             "x-forwarded-host": "n8n.srv1029933.hstgr.cloud",
             "x-forwarded-port": "443",
             "x-forwarded-proto": "https",
             "x-forwarded-server": "e09aa142c744",
-            "x-real-ip": "54.172.39.175"
+            "x-real-ip": "3.238.118.177"
           },
           "params": {},
           "query": {},
           "body": {
-            "recordId": "recScv1AYtbqV21M9",
-            "sourceText": "Natürlicher Wirkstoffkomplex für ein gesundes Nerven‑⁶und Immunsystem², schöne Haut¹ ⁴, Zellschutz³ und eine gesunde Verdauung⁵.\n\nEssenzielle Kombination aus Biotin, Vitamin C, 5-HTP und Pflanzenextrakten mit hoher Bioverfügbarkeit. Unterstützt Nerven‑⁶ und Immunsystem², deine Psyche², eine gesunde Verdauung⁵ und den Zellschutz³. 100 % vegan, natürlich und frei von Gentechnik.",
+            "recordId": "recNe3A02DjDFafjQ",
+            "sourceText": "Luxus für deine Haut — Wir bringen deine Haut auf natürliche Weise zum Strahlen. Unsere Produkte setzen neue Maßstäbe in der Hautpflege. Pure Naturkosmetik. 650k+ Happy customers. PETA-approved.",
             "targetLang": "English-US",
             "tone": "Promotional",
             "useCase": "Ads",
@@ -2311,30 +2645,8 @@
       "main": [
         [
           {
-            "node": "Brand Guidelines",
+            "node": "Update Status -> Getting Prompts",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Anthropic Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Claude Translation",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Anthropic Chat Model1": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Final Comparing Agent",
-            "type": "ai_languageModel",
             "index": 0
           }
         ]
@@ -2362,7 +2674,7 @@
       "main": [
         [
           {
-            "node": "Update Translations+Status",
+            "node": "Parse",
             "type": "main",
             "index": 0
           }
@@ -2380,7 +2692,7 @@
       "main": [
         [
           {
-            "node": "DeepL Translation",
+            "node": "Update Status",
             "type": "main",
             "index": 0
           }
@@ -2420,7 +2732,7 @@
       "main": [
         [
           {
-            "node": "DeepL Language Codes",
+            "node": "DeepL Translation",
             "type": "main",
             "index": 0
           }
@@ -2449,11 +2761,71 @@
         ]
       ]
     },
-    "Brand Guidelines": {
+    "Parse": {
       "main": [
         [
           {
-            "node": "Update Status",
+            "node": "Update Translations+Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Claude Translation",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Final Comparing Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy of Brand Guidelines (Not Used Here)": {
+      "main": [
+        []
+      ]
+    },
+    "Parse Prompts": {
+      "main": [
+        [
+          {
+            "node": "DeepL Language Codes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status -> Getting Prompts": {
+      "main": [
+        [
+          {
+            "node": "Get Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Prompts": {
+      "main": [
+        [
+          {
+            "node": "Parse Prompts",
             "type": "main",
             "index": 0
           }
@@ -2465,7 +2837,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "3ac7943c-f05f-46e9-894c-8893053415c9",
+  "versionId": "c8c27c4f-0398-4248-a37a-5014b6356cee",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7ccd564732cc30538297b719b11b4bda8657febe7bcff97f15e90642fadbb3fb"
