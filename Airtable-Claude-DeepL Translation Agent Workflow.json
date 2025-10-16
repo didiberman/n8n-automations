@@ -24,7 +24,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2128,
+        3696,
         -736
       ],
       "id": "3a4ee097-2696-4567-98d2-d8613eb0ec1e",
@@ -32,14 +32,14 @@
     },
     {
       "parameters": {
-        "text": "={{ $('Webhook').first().json.body.sourceText }}",
+        "text": "={{ $('Normalization').first().json.text_to_translate }}",
         "translateTo": "={{ $('DeepL Language Codes').first().json.targetLangCode }}",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.deepL",
       "typeVersion": 1,
       "position": [
-        528,
+        2096,
         -448
       ],
       "id": "6f03487c-3906-4707-a86a-2d3a90d56599",
@@ -56,7 +56,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=source text to translate:  {{ $('Webhook').first().json.body.sourceText }}\nTarget language: {{ $('Webhook').first().json.body.targetLang }}\nTone: {{ $('Parse Prompts').first().json.tone_instructions }}\nUse case (where we want to use it):  {{ $('Parse Prompts').first().json.usecase_instructions }}\nTranslation style: {{ $('Parse Prompts').first().json.style_instructions }}\nPlease always only provide one translation only, never more alternatives and do not preface your translation with anything. Just provide the bare final translation text please.\n\nPlease return the response as JSON, with the translated text as var text, and a short title for the translation as var title.",
+        "text": "=source text to translate: {{ $('Normalization').first().json.text_to_translate }}\nTarget language: {{ $('Webhook').first().json.body.targetLang }}\nTone: {{ $('Parse Prompts').first().json.tone_instructions }}\nUse case (where we want to use it):  {{ $('Parse Prompts').first().json.usecase_instructions }}\nTranslation style: {{ $('Parse Prompts').first().json.style_instructions }}\nPlease always only provide one translation only, never more alternatives and do not preface your translation with anything. Just provide the bare final translation text please.\n\nWe also have a specific dictionary for some words - please use those if relevant: {{ $('Parse Prompts').first().json.dictionary_instructions }}\n\nPlease return the response as JSON, with the translated text as var text, and a short title for the translation as var title.",
         "messages": {
           "messageValues": [
             {
@@ -69,7 +69,7 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        976,
+        2544,
         -544
       ],
       "id": "02aabf98-b276-414c-80da-2ba846fa940e",
@@ -84,7 +84,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        80,
+        1648,
         -448
       ],
       "id": "cdab36c3-f3dd-415d-af2c-bf4c65a0a78c",
@@ -93,7 +93,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a senior translation quality reviewer. Your task is to analyze two translations of a source text and produce one final, superior version. Combine the best elements of both, fixing any errors and ensuring the tone and style are perfect.\n\nSource Text: {{ $('Webhook').first().json.body.sourceText }}\n\nTranslation A (from DeepL):\n{{ $('DeepL Translation').first().json.text }}\n\nTranslation B (from Claude):\n{{ $('Parse').first().json.text }}\n\nInstructions:\n\nAnalyze both translations for accuracy, grammar, and natural flow.\n\nAdhere to the requested tone: {{ $('Parse Prompts').first().json.tone_instructions }}\nEnsure the translation is suitable for the use case: {{ $('Parse Prompts').first().json.usecase_instructions }}\n\nTranslation Style: {{ $('Parse Prompts').first().json.style_instructions }}\n\nCreate a final, polished translation that is better than both inputs.\n\nYour output must be ONLY the final translated text. Do not add any explanations like \"Here is the final version:\".\n\nReturn the response as JSON, with the final result as finalresult, and explanation as explanation of what you did, and referencing any guidelines we specified.\n\nFor the explanation please have more proper line-breaks in order to display the explanation in a way that is more easy to digest.",
+        "text": "=You are a senior translation quality reviewer. Your task is to analyze two translations of a source text and produce one final, superior version. Combine the best elements of both, fixing any errors and ensuring the tone and style are perfect.\n\nSource Text: {{ $('Normalization').first().json.text_to_translate }}\n\nTranslation A (from DeepL):\n{{ $('DeepL Translation').first().json.text }}\n\nTranslation B (from Claude):\n{{ $('Parse').first().json.text }}\n\nInstructions:\n\nAnalyze both translations for accuracy, grammar, and natural flow.\n\nAdhere to the requested tone: {{ $('Parse Prompts').first().json.tone_instructions }}\nEnsure the translation is suitable for the use case: {{ $('Parse Prompts').first().json.usecase_instructions }}\n\nTranslation Style: {{ $('Parse Prompts').first().json.style_instructions }}\n\nWe also have a specific dictionary for some words - please use those if relevant: {{ $('Parse Prompts').first().json.dictionary_instructions }}\n\nCreate a final, polished translation that is better than both inputs.\n\nYour output must be ONLY the final translated text. Do not add any explanations like \"Here is the final version:\".\n\nReturn the response as JSON, with the final result as finalresult, and explanation as explanation of what you did, and referencing any guidelines we specified.\n\nFor the explanation please have more proper line-breaks in order to display the explanation in a way that is more easy to digest.",
         "messages": {
           "messageValues": [
             {
@@ -106,7 +106,7 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1776,
+        3344,
         -640
       ],
       "id": "c72add10-ffe3-477b-b907-799988bcd547",
@@ -398,7 +398,7 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        2352,
+        3920,
         -736
       ],
       "id": "ae47b3fc-df2c-4699-b537-4361334f4fff",
@@ -694,7 +694,7 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        304,
+        1872,
         -448
       ],
       "id": "47c15226-337d-426e-af56-28820dfd71e5",
@@ -992,7 +992,7 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        1552,
+        3120,
         -640
       ],
       "id": "c91a7ddf-8706-4c2a-9612-0808243f7011",
@@ -1289,7 +1289,7 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        752,
+        2320,
         -544
       ],
       "id": "b3f9d908-ca92-47ef-8491-d0d82d26e2f7",
@@ -1582,7 +1582,7 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        752,
+        2320,
         -352
       ],
       "id": "050a18d8-6975-4145-922e-9ad51df15e7a",
@@ -1875,7 +1875,7 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        2128,
+        3696,
         -544
       ],
       "id": "2d30c86d-1617-44bb-b3f9-539ca1ee4cc2",
@@ -2168,7 +2168,7 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        1328,
+        2896,
         -448
       ],
       "id": "7d370bed-6ca8-4cae-a27d-c7045eaa8b81",
@@ -2187,7 +2187,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1328,
+        2896,
         -640
       ],
       "id": "5e9ee07c-a4d4-41da-9ee3-1f0992aac440",
@@ -2201,7 +2201,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
       "position": [
-        1056,
+        2624,
         -320
       ],
       "id": "b43f8137-9842-457c-a934-c32e0fdcc93b",
@@ -2221,7 +2221,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
       "position": [
-        1856,
+        3424,
         -416
       ],
       "id": "dba7fc3d-007d-408c-bde3-c34b4e5792f9",
@@ -2258,12 +2258,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// Inputs from webhook or previous node\nconst toneInput = $('Webhook').first().json.body.tone;\nconst useCaseInput = $('Webhook').first().json.body.useCase;\nconst styleInput = $('Webhook').first().json.body.translationStyle;\n\nconst records = $input.all();\n\n// Helper to find record by matching its Name (case-insensitive)\nconst findRecord = (name) => {\n  if (!name) return null;\n  return records.find(r =>\n    r.json.Name.toLowerCase().trim() === name.toLowerCase().trim()\n  );\n};\n\n// Extract each one\nconst tone = findRecord(toneInput);\nconst useCase = findRecord(useCaseInput);\nconst style = findRecord(styleInput);\nconst brand = records.find(r =>\n  r.json.Name.toLowerCase().includes(\"brand\")\n);\n\n// Return unified output\nreturn [\n  {\n    json: {\n      brand_name: brand?.json.Name || \"\",\n      brand_instructions: brand?.json.Instructions || \"\",\n\n      tone_name: tone?.json.Name || \"\",\n      tone_instructions: tone?.json.Instructions || \"\",\n\n      style_name: style?.json.Name || \"\",\n      style_instructions: style?.json.Instructions || \"\",\n\n      usecase_name: useCase?.json.Name || \"\",\n      usecase_instructions: useCase?.json.Instructions || \"\"\n    }\n  }\n];"
+        "jsCode": "// Inputs from webhook or previous node\nconst toneInput = $('Webhook').first().json.body.tone;\nconst useCaseInput = $('Webhook').first().json.body.useCase;\nconst styleInput = $('Webhook').first().json.body.translationStyle;\n\nconst records = $input.all();\n\n// Helper to find record by matching its Name (case-insensitive)\nconst findRecord = (name) => {\n  if (!name) return null;\n  return records.find(r =>\n    r.json.Name.toLowerCase().trim() === name.toLowerCase().trim()\n  );\n};\n\n// Extract each one\nconst tone = findRecord(toneInput);\nconst useCase = findRecord(useCaseInput);\nconst style = findRecord(styleInput);\nconst brand = records.find(r =>\n  r.json.Name.toLowerCase().includes(\"brand\")\n);\nconst dictionary = records.find(r =>\n  r.json.Name.toLowerCase().includes(\"dictionary\")\n);\n\n// Return unified output\nreturn [\n  {\n    json: {\n      brand_name: brand?.json.Name || \"\",\n      brand_instructions: brand?.json.Instructions || \"\",\n\n      tone_name: tone?.json.Name || \"\",\n      tone_instructions: tone?.json.Instructions || \"\",\n\n      style_name: style?.json.Name || \"\",\n      style_instructions: style?.json.Instructions || \"\",\n\n      usecase_name: useCase?.json.Name || \"\",\n      usecase_instructions: useCase?.json.Instructions || \"\",\n\n      dictionary_name: dictionary?.json.Name || \"\", // static like brand\n      dictionary_instructions: dictionary?.json.Instructions || \"\" // static like brand\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -144,
+        1424,
         -448
       ],
       "id": "56f8d86e-3887-4f52-8e7a-aca54f789b52",
@@ -2289,7 +2289,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "id": "={{ $json.body.recordId }}",
+            "id": "={{ $('Webhook').item.json.body.recordId }}",
             "Status": "Getting Instructions"
           },
           "matchingColumns": [
@@ -2557,7 +2557,7 @@
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        -592,
+        976,
         -448
       ],
       "id": "37e25870-1a7f-4e7b-ab7a-384b39a41f6c",
@@ -2586,17 +2586,1153 @@
           "cachedResultName": "Guidelines",
           "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbl8Ps9bpMX2J5SPz"
         },
-        "filterByFormula": "={{ \n  `OR(\n    {Name} = \"Brand Guidelines\",\n    {Name} = \"${$('Webhook').first().json.body.tone}\",\n    {Name} = \"${$('Webhook').first().json.body.useCase}\",\n    {Name} = \"${$('Webhook').first().json.body.translationStyle}\"\n  )`\n}}",
+        "filterByFormula": "={{ \n  `OR(\n    {Name} = \"Brand Guidelines\",\n    {Name} = \"Dictionary\",\n    {Name} = \"${$('Webhook').first().json.body.tone}\",\n    {Name} = \"${$('Webhook').first().json.body.useCase}\",\n    {Name} = \"${$('Webhook').first().json.body.translationStyle}\"\n  )`\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        -448
+      ],
+      "id": "f0b0894d-b2c4-4d66-b160-796ac0fa86cb",
+      "name": "Get Prompts",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9ab2165c-2467-41eb-9f65-66eaf38db85a",
+              "leftValue": "={{ $json.body.Document }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -592,
+        -448
+      ],
+      "id": "fdcf1acf-3fde-40b1-aac2-3f4193797f09",
+      "name": "If we received document.."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://<YOUR-END-POINT-HERE>.cognitiveservices.azure.com/documentintelligence/documentModels/prebuilt-read:analyze",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api-version",
+              "value": "2024-11-30"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "<INSERT AZURE KEY HERE>"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "urlSource",
+              "value": "={{ $('Webhook').item.json.body.Document }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -144,
+        -512
+      ],
+      "id": "ce1e5155-0680-495a-9546-7ef77b690d7f",
+      "name": "Submit Document Scan to Azure",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.headers['operation-location'] }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "<INSERT-AZURE-KEY-HERE>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        304,
+        -608
+      ],
+      "id": "cdc7dc90-95ea-48e8-bc60-0893486e44e7",
+      "name": "Get Document Contents from Azure Scan",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "amount": 0.3,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        -608
+      ],
+      "id": "621b9902-cc59-4e34-97f3-fc4f39602c5e",
+      "name": "Wait 30s",
+      "webhookId": "baaad68d-64a2-40d9-8cbd-8dc0f930c381"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').first().json.body.recordId }}",
+            "Status": "Scanning Document (30s wait)",
+            "Source Text": "** Scanned File **"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating (DeepL)",
+                  "value": "Translating (DeepL)"
+                },
+                {
+                  "name": "Translating (Claude)",
+                  "value": "Translating (Claude)"
+                },
+                {
+                  "name": "Synthesizing (Final)",
+                  "value": "Synthesizing (Final)"
+                },
+                {
+                  "name": "Getting Instructions",
+                  "value": "Getting Instructions"
+                },
+                {
+                  "name": "Scanning Document (30s wait)",
+                  "value": "Scanning Document (30s wait)"
+                },
+                {
+                  "name": "Receiving Document Content",
+                  "value": "Receiving Document Content"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created by",
+              "displayName": "Created by",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Document",
+              "displayName": "Document",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
         "options": {}
       },
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
         -368,
+        -512
+      ],
+      "id": "b97cb5c7-29cd-4d98-8363-319432a8bc2d",
+      "name": "Status -> \"Scanning Document\"",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Document Scanning Branch (If Attached)\n",
+        "height": 256,
+        "width": 1488
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -624,
+        -608
+      ],
+      "typeVersion": 1,
+      "id": "b882a5ff-34dc-403a-bc90-0a049baa16a2",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "690f8b18-d8fc-43d4-b2b1-56ded5c94bd2",
+              "name": "scanned_text",
+              "value": "={{ $json.analyzeResult.content }}",
+              "type": "string"
+            },
+            {
+              "id": "75270a5d-63cd-4ff6-a80b-7456c447a691",
+              "name": "sourceText",
+              "value": "=  ",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        -704
+      ],
+      "id": "f5be3508-188d-4acf-a8b5-4a6fc255853d",
+      "name": "Normalize Output"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8ae7341d-5949-41cb-9e5e-d8fb843c8431",
+              "name": "sourceText",
+              "value": "={{$('Webhook').first().json.body.sourceText }}",
+              "type": "string"
+            },
+            {
+              "id": "cd8fa64c-96cd-49e2-9040-049126acceaa",
+              "name": "scanned_text",
+              "value": "  ",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        -256
+      ],
+      "id": "132f29ad-51a4-409d-a2ba-78973bf8ef58",
+      "name": "Normalize Output1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa82f710-0e32-40f2-a836-86af18f26f1a",
+              "name": "text_to_translate",
+              "value": "={{ ($json.scanned_text || '') + ' ' + ($json.sourceText || '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        752,
         -448
       ],
-      "id": "f0b0894d-b2c4-4d66-b160-796ac0fa86cb",
-      "name": "Get Prompts",
+      "id": "371853ce-6d78-4df1-8b5f-ad1986aeed22",
+      "name": "Normalization"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').first().json.body.recordId }}",
+            "Status": "Error",
+            "Explanation": "=Azure Document Scanning Error"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating",
+                  "value": "Translating"
+                },
+                {
+                  "name": "Synthesizing",
+                  "value": "Synthesizing"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        -512
+      ],
+      "id": "6a478883-7678-433b-8970-a90b28e5ccc8",
+      "name": "Update Azure Error",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "btjym2luT5VVB0XD",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqM5iiz1iyo3Jen",
+          "mode": "list",
+          "cachedResultName": "Translation Workflow",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltY8iDVvpJZIeu3",
+          "mode": "list",
+          "cachedResultName": "Translation Requests",
+          "cachedResultUrl": "https://airtable.com/appqM5iiz1iyo3Jen/tbltY8iDVvpJZIeu3"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').first().json.body.recordId }}",
+            "Status": "Error",
+            "Explanation": "=Azure Document Scanning Error"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Source Text",
+              "displayName": "Source Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Language",
+              "displayName": "Target Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English-US",
+                  "value": "English-US"
+                },
+                {
+                  "name": "English-UK",
+                  "value": "English-UK"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "Italian",
+                  "value": "Italian"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Dutch",
+                  "value": "Dutch"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Use Case",
+              "displayName": "Use Case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CRM",
+                  "value": "CRM"
+                },
+                {
+                  "name": "Ads",
+                  "value": "Ads"
+                },
+                {
+                  "name": "Website",
+                  "value": "Website"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Promotional",
+                  "value": "Promotional"
+                },
+                {
+                  "name": "Formal",
+                  "value": "Formal"
+                },
+                {
+                  "name": "Casual",
+                  "value": "Casual"
+                },
+                {
+                  "name": "Friendly",
+                  "value": "Friendly"
+                },
+                {
+                  "name": "Professional",
+                  "value": "Professional"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Translation Style",
+              "displayName": "Translation Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Literal",
+                  "value": "Literal"
+                },
+                {
+                  "name": "Free",
+                  "value": "Free"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Processing",
+                  "value": "Processing"
+                },
+                {
+                  "name": "Complete",
+                  "value": "Complete"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                },
+                {
+                  "name": "Translating",
+                  "value": "Translating"
+                },
+                {
+                  "name": "Synthesizing",
+                  "value": "Synthesizing"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "DeepL Output",
+              "displayName": "DeepL Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Claude Output",
+              "displayName": "Claude Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Output",
+              "displayName": "Final Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Explanation",
+              "displayName": "Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        80,
+        -400
+      ],
+      "id": "9349057b-67ae-4ce9-9695-4a446b6b4006",
+      "name": "Update Azure Error1",
       "credentials": {
         "airtableTokenApi": {
           "id": "btjym2luT5VVB0XD",
@@ -2612,30 +3748,31 @@
           "headers": {
             "host": "n8n.srv1029933.hstgr.cloud",
             "user-agent": "Mozilla/5.0 (compatible; AirtableScripting; +https://airtable.com/developers/scripting;)",
-            "content-length": "337",
+            "content-length": "449",
             "accept": "*/*",
             "accept-encoding": "gzip,deflate",
             "content-type": "application/json",
             "x-airtable-source": "appqM5iiz1iyo3Jen/wflxGeLG06C1AafNA",
-            "x-forwarded-for": "3.238.118.177",
+            "x-forwarded-for": "18.215.248.54",
             "x-forwarded-host": "n8n.srv1029933.hstgr.cloud",
             "x-forwarded-port": "443",
             "x-forwarded-proto": "https",
             "x-forwarded-server": "e09aa142c744",
-            "x-real-ip": "3.238.118.177"
+            "x-real-ip": "18.215.248.54"
           },
           "params": {},
           "query": {},
           "body": {
-            "recordId": "recNe3A02DjDFafjQ",
-            "sourceText": "Luxus für deine Haut — Wir bringen deine Haut auf natürliche Weise zum Strahlen. Unsere Produkte setzen neue Maßstäbe in der Hautpflege. Pure Naturkosmetik. 650k+ Happy customers. PETA-approved.",
+            "recordId": "recZe2niNnl1NxzQR",
+            "sourceText": "",
             "targetLang": "English-US",
             "tone": "Promotional",
             "useCase": "Ads",
-            "translationStyle": "Free"
+            "translationStyle": "Free",
+            "Document": "https://v5.airtableusercontent.com/v3/u/46/46/1760616000000/tWavgUvcsZE-kls8gIcQUQ/jxaNWEMVQGqRKOToOB9mhOAExCsyS8MUT1g7NyRkErullX_qiiIsoq51BWmpFHhZNWxDmjDvPWv14jDi5Z7QmQJjqWyShmI8IgsngK6dUoU8eGcGS3Ml3TVGxjeUBrlfDXOIFKu0znvUntX1iM5BNsRP4uh-EDXWoT1UD1ZbIUI/2z94ENrNXjyZzs4OD8zwofqwZOQWaT6h9DFEVLyAXDs"
           },
-          "webhookUrl": "https://n8n.srv1029933.hstgr.cloud/webhook/translationreq",
-          "executionMode": "production"
+          "webhookUrl": "https://n8n.srv1029933.hstgr.cloud/webhook-test/translationreq",
+          "executionMode": "test"
         }
       }
     ]
@@ -2645,7 +3782,7 @@
       "main": [
         [
           {
-            "node": "Update Status -> Getting Prompts",
+            "node": "If we received document..",
             "type": "main",
             "index": 0
           }
@@ -2831,13 +3968,122 @@
           }
         ]
       ]
+    },
+    "If we received document..": {
+      "main": [
+        [
+          {
+            "node": "Status -> \"Scanning Document\"",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Document Scan to Azure": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Azure Error1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Document Contents from Azure Scan": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Azure Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s": {
+      "main": [
+        [
+          {
+            "node": "Get Document Contents from Azure Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status -> \"Scanning Document\"": {
+      "main": [
+        [
+          {
+            "node": "Submit Document Scan to Azure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output": {
+      "main": [
+        [
+          {
+            "node": "Normalization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output1": {
+      "main": [
+        [
+          {
+            "node": "Normalization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalization": {
+      "main": [
+        [
+          {
+            "node": "Update Status -> Getting Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "c8c27c4f-0398-4248-a37a-5014b6356cee",
+  "versionId": "15710cab-7ae3-4283-ab82-aa5320cf23b7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7ccd564732cc30538297b719b11b4bda8657febe7bcff97f15e90642fadbb3fb"
